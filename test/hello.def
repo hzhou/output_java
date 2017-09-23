@@ -1,0 +1,13 @@
+module: java
+
+$print Hello World!
+
+$(if:0)
+    rand=new Random
+    $print rand.nextInt(100)
+    $print rand.nextInt(100)
+
+/* expect output:
+Hello World!
+*/
+

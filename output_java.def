@@ -1,0 +1,98 @@
+include: output.def
+include: macros/print.def
+include: macros/type.def
+
+page: output_java, inherit, c
+    output_dir: lib/MyDef
+    ext: java
+    package: MyDef::output_java
+
+    subcode: on_init
+        $(if:0)
+            $if !$page->{package}
+                $if $page->{outdir}=~/^[^\/\.]/
+                    $page->{package}=$page->{outdir}
+                    $page->{package}=~s/\//./g
+
+        $call @java_init
+
+    #-------------------
+    subcode: on_parsecode
+        $if $l=~/^\$import\s*(.*)/
+            $foreach $p in split /,\s*/, $1
+                add_import($p)
+            return
+        $elif $l=~/^\$print\s*(.*)/
+            parse_print($1)
+            return
+        $elif $l=~/^(\w+)\s*=\s*new\s*(\w+)\s*(.*)\s*;?/
+            my ($v, $cls, $p)=($1, $2, $3)
+            $if !$p
+                push @$out, "$cls $v = new $cls();"
+            $elif $p=~/^\((.*)\)/
+                push @$out, "$cls $v = new $cls($1);"
+            $else
+                push @$out, "$cls $v = new $cls($p);"
+
+            $if $common_classes{$cls}
+                add_import($common_classes{$cls})
+
+            return
+
+    #--------------------
+    subcode: on_dumpout
+        $call class_wrap
+
+        my $funclist=\@$(super:function_list)
+        $foreach $func in @$funclist
+            $call process_function_java
+            $func->{skip_declare}=1
+            $func->{processed}=1
+
+        # -------------------
+        subcode: class_wrap
+            my $page=$$(super:page)
+            $if $page->{package}
+                push @$f, "package $page->{package};\n"
+            $call @java_dump
+            unshift @$out, "public class $page->{_pagename} {\n", "INDENT"
+            push @$out, "DEDENT", "}\n"
+
+        subcode: process_function_java
+            my $name=$func->{name}
+            $if $name eq "main"
+                $func->{skip_makefile}=1
+                $func->{ret_type}="public static void"
+                $func->{param_list}=["String[] args"]
+            $else
+                $if !$func->{ret_type}
+                    $func->{ret_type}="void"
+                $func->{ret_type}="public static $func->{ret_type}"
+
+            $(super:process_function_std)($func)
+
+#---------------------------------------- 
+subcode:: java_init
+    $global @import_list, %import_hash
+    @import_list=()
+    %import_hash=()
+
+fncode: add_import($l)
+    $if !$import_hash{$l}
+        $import_hash{$l}=1
+        push @import_list, $l
+
+subcode:: java_dump
+    $if @import_list
+        push @$f, "\n"
+        $foreach $imp in @import_list
+            push @$f, "import $imp;\n"
+
+
+#---------------------------------------- 
+subcode: _autoload
+    $global %common_classes
+    %common_classes=(
+        Random => "java.util.Random",
+    );
+

@@ -1,0 +1,12 @@
+subcode: basic_frame
+    $list _basic_main
+
+fncode: _basic_main(main)
+    $call main2
+
+#----------------------------------------
+macros:
+    atoi: Integer.parseInt($1)
+    atof: Double.parseDouble($1)
+
+

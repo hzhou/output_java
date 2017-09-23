@@ -1,0 +1,58 @@
+page: collide, basic_frame
+    module: java
+
+    vlist=collide(f_m1, f_vx1, f_vy1, f_m2, f_vx2, f_vy2, f_x1, f_y1, f_x2, f_y2)
+    f_vx1=vlist[0]
+    f_vy1=vlist[1]
+    f_vx2=vlist[2]
+    f_vy2=vlist[3]
+
+fncode: collide(f_m1, f_vx1, f_vy1, f_m2, f_vx2, f_vy2, f_x1, f_y1, f_x2, f_y2)
+    $call xy_to_va, f_vx1, f_vy1, f_v1, f_a1
+    $call xy_to_va, f_vx2, f_vy2, f_v2, f_a2
+
+    f_dx=f_x1-f_x2
+    f_dy=f_y1-f_y2
+    f_da=Math.atan2(f_dy, f_dx)
+    
+    tf_a1=f_a1-f_da
+    tf_a2=f_a2-f_da
+
+    $call va_to_xy, f_v1, tf_a1, tf_vx1, tf_vy1
+    $call va_to_xy, f_v2, tf_a2, tf_vx2, tf_vy2
+
+    $call frontal_collide, f_m1, tf_vx1, f_m2, tf_vx2, f_d1, f_d2
+    tf_vx1+=tf_d1
+    tf_vx2+=tf_d2
+
+    $call xy_to_va, f_vx1, f_vy1, f_v1, tf_a1
+    $call xy_to_va, f_vx2, f_vy2, f_v2, tf_a2
+
+    f_a1=tf_a1+f_da
+    f_a2=tf_a2+f_da
+
+    $call va_to_xy, f_v1, f_a1, f_vx1, f_vy1
+    $call va_to_xy, f_v2, f_a2, f_vx2, f_vy2
+
+    return new float[]{f_vx1, f_vy1, f_vx2, f_vy2}
+    
+
+    subcode: xy_to_va(x, y, v, a)
+        $(v)=Math.sqrt($(x)^2+$(y)^2)
+        $(a)=Math.atan2($(y), $(x))
+
+    subcode: va_to_xy(v, a, x, y)
+        $(x)=$(v)*Math.cos($(a)
+        $(y)=$(v)*Math.sin($(a)
+
+
+    subcode: frontal_collide(m1, v1, m2, v2, d1, d2)
+        #-- m1 * d1 + m2 * d2 = 0
+        #-- m1 * (v1+d1)^2 + m2 * (v2+d2)^2 = m1 * v1^2 + m2 * v2^2
+
+        $(d1) = 2*($(v2)-$(v1)) / (1 + $(m1)/$(m2))
+        $(d2) = -$(m1)/$(m2)*$(d1)
+
+
+
+    

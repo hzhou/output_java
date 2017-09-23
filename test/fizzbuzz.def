@@ -1,0 +1,12 @@
+page: fizzbuzz, basic_frame
+    module: java
+
+    $for i=1:101
+        $if i%5==0 && i%7==0
+            $print "fizzbuzz -"
+        $elif i%5==0
+            $print "fizz -"
+        $elif i%7==0
+            $print "buzz -"
+        $else
+            $print i+ " -"

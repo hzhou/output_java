@@ -1,0 +1,39 @@
+fncode: parse_print($param)
+    $global $print_type=1
+    $if !$param
+        push @$out, "System.out.println();"
+    $else
+        $param=~s/^\s+//
+        $if $param=~/^usesub:\s*(\w+)/
+            $print_type=$1
+        $else
+            #--- fmt_string, add newline
+            my ($n, $fmt)=MyDef::output_c::fmt_string($param, 1)
+            $if $print_type==1
+                $call get_print_to
+                $if $print_to
+                    $call print_to
+                $else
+                    $call print_1
+            $elif $print_type
+                MyDef::compileutil::call_sub("$print_type, $fmt")
+        return
+
+    subcode: get_print_to
+        my $print_to = MyDef::compileutil::get_macro_word("print_to", 1)
+
+    subcode: print_1
+        # $print print_1: [$fmt]
+        $if $n==0 and $fmt=~/^"(.*)\\n"/
+            push @$out, "System.out.println(\"$1\");"
+        $elif $fmt=~/^"%[sdf]\\n", (.*)/
+            push @$out, "System.out.println($1);"
+        $else
+            push @$out, "System.out.printf($fmt);"
+
+    subcode: print_to
+        $if $print_to =~/s_/
+            push @$out, "$print_to = String.format($fmt);"
+        $else
+            # err
+            push @$out, "System.$print_to.printf($fmt);"
