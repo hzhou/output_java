@@ -27,8 +27,30 @@ subcode: default_window_events
     addWindowListener(this)
 
     $function windowClosing(WindowEvent evt)
+        DUMP_STUB _exit
         System.exit(0)
     $(for:Opened,Closed,Iconified,Deiconified,Activated,Deactivated)
         $function window$1(WindowEvent evt)
             NOOP
 
+subcode: animate(millisec)
+    $import javax.swing.Timer
+    $implements ActionListener
+    $private Timer timer
+
+    timer=new Timer($(millisec), this)
+    timer.setInitialDelay(2000)
+    timer.setActionCommand("timer")
+    timer.start()
+    $(block:_actionPerformed)
+        $if s_cmd == "timer"
+            BLOCK
+            repaint()
+
+    $list actionPerformed
+
+fncode: actionPerformed(ActionEvent evt)
+    $skip_autolist
+    s_cmd = evt.getActionCommand()
+    DUMP_STUB _actionPerformed
+    $call @on_action

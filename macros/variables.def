@@ -17,10 +17,18 @@ subcode:: java_parse
             return
 
         $param=~s/\s*;\s*$//
+        my $value
+        $if $param=~/(.*?)\s*=\s*(.*)/
+            $param = $1
+            $value = $2
         my @vlist = MyDef::utils::proper_split($param)
         $foreach $v in @vlist
             $(super:f_add_var)($h, $l, $v)
             $$(super:global_hash)->{$v}=1
+        $if $value
+            my @tlist =MyDef::utils::proper_split($value)
+            $for $i=0:@vlist
+                push @$out, "$vlist[$i] = $tlist[$i];"
         return
 
 #----------------------------------------------- 
