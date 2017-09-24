@@ -1,0 +1,534 @@
+page: main, basic_frame
+    subcode: global
+	$call define_random
+	$enumbit(WALL) TOP, RIGHT, BOTTOM, LEFT
+	$enumbit(DIR) TOP, RIGHT, BOTTOM, LEFT
+	$enumbit(,4) FINISH, VISITED, OPEN
+
+	$global pc_maze=NULL
+
+	$list maze_create_kruskal
+	$list maze_create_backtracker
+	$list maze_mark_cell, maze_fill_cell
+	$call function_list
+
+    subcode: color(name, r, g, b)
+	u2_color_$(name)=rgb565($(r), $(g), $(b))
+
+    subcode: main
+	$call color, wall, 0.9, 0.8, 0.9
+	$call color, edge, 0.9, 0.9, 0.9
+	$call color, door, 0.2, 0.8, 0.2
+	$call color, dead, 0.2, 0.2, 0.8
+	$call color, visit, 0.2, 0.8, 0.2
+	$call color, backtrack, 0.5, 0.1, 0.1
+	$call color, deadend, 0.3, 0.3, 0.1
+
+	$call fb_app
+
+    subcode: fb_init
+	$call maze_init
+
+	tn_choice=irand(2)
+	$if tn_choice==0
+	    maze_create_kruskal()
+	    printf("maze_create_kruskal:\n")
+	$else
+	    maze_create_backtracker()
+	    printf("maze_create_backtracker:\n")
+	$dump(initialized) n_cx, n_x, n_y, n_start_wall, n_start, n_finish_wall, n_finish
+
+	$call clearfb
+	$call maze_draw
+	$call maze_walk_init
+	n_fb_wait=50
+
+    subcode: fb_update
+	$if !n_reach_finish
+	    $call maze_walk
+	$else
+	    $call maze_walk_finish
+	    sleep(10)
+	    $call fb_init
+	    
+# ------------------------------------------------------------
+subcode: maze_init
+    $call maze_init_size
+    $if pc_maze
+	free(pc_maze)
+    $allocate(n_x*n_y, 0) pc_maze
+
+    $call maze_init_wall
+    $call maze_init_door
+
+    subcode: maze_init_size
+        $global n_offset, n_cx, n_x, n_y
+        n_offset=4
+        n_cx=irand(60)+6
+        n_x=(display_width-n_offset*2)/n_cx
+        n_y=(display_height-n_offset*2)/n_cx
+        $global n_cx1, n_cx2, n_cx12, n_cx3
+        $if n_cx>8
+            # wall thickness
+            n_cx1=n_cx/4/2 
+            # spacer
+            n_cx2=n_cx/4/2
+        $else
+            n_cx1=1
+            n_cx2=1
+        n_cx12=n_cx1+n_cx2
+        n_cx3=n_cx-(n_cx1+n_cx2)*2
+
+    subcode: maze_init_wall
+        $for i=0:n_x
+            pc_maze[i] |= WALL_TOP
+            pc_maze[i+(n_y-1)*n_x] |= WALL_BOTTOM
+        $for j=0:n_y
+            pc_maze[j*n_x] |= WALL_LEFT
+            pc_maze[n_x-1+j*n_x] |= WALL_RIGHT
+
+    subcode: maze_init_door
+        n_start_wall=irand(4)
+        n_finish_wall=(n_start_wall+2) % 4
+        $if n_start_wall % 2 == 0
+            n_start=irand(n_x)
+            n_finish=irand(n_x)
+        $else
+            n_start=irand(n_y)
+            n_finish=irand(n_y)
+        $call maze_get_endxy, start
+        $call maze_get_endxy, finish
+
+subcode: maze_get_endxy(start)
+    $global n_$(start)_x, n_$(start)_y
+    $if n_$(start)_wall==0
+	n_$(start)_x=n_$(start)
+	n_$(start)_y=0
+    $elif n_$(start)_wall==1
+	n_$(start)_x=n_x-1
+	n_$(start)_y=n_$(start)
+    $elif n_$(start)_wall==2
+	n_$(start)_x=n_$(start)
+	n_$(start)_y=n_y-1
+    $elif n_$(start)_wall==3
+	n_$(start)_x=0
+	n_$(start)_y=n_$(start)
+
+# ---- Recursive Backtracker ----------------------------------------
+fncode: maze_create_backtracker
+    $enumbit(IN) TOP, RIGHT, BOTTOM, LEFT
+    $enumbit(OUT, 4) TOP, RIGHT, BOTTOM, LEFT
+    $struct(path) n_x, n_y
+    $local_allocate(n_x*n_y, 0) pc_doors
+    $local_allocate(n_x*n_y) pstpath
+
+    $(set:door=pc_doors[n_cur_x+n_cur_y*n_x])
+    $(set:wall=pc_maze[n_cur_x+n_cur_y*n_x])
+
+    n_path_i=0
+    n_cur_x=n_start_x
+    n_cur_y=n_start_y
+    tn_dir=0
+    $while 1
+	$local pc_ways[3], n_ways
+	n_ways=0
+	$call backtracker_find_ways
+	$if n_ways==0
+	    $if n_path_i==0
+		goto ret
+	    # -- backtrack --
+	    n_path_i--
+	    n_cur_x=pstpath[n_path_i].n_x
+	    n_cur_y=pstpath[n_path_i].n_y
+	$else
+	    # -- forward --
+	    pstpath[n_path_i].n_x=n_cur_x
+	    pstpath[n_path_i].n_y=n_cur_y
+	    n_path_i++
+
+	    tn_dir=pc_ways[irand(n_ways)]
+	    $(door) |= ((OUT_TOP)<<tn_dir)
+	    $if tn_dir==0
+		n_cur_y--
+	    $elif tn_dir==1
+		n_cur_x++
+	    $elif tn_dir==2
+		n_cur_y++
+	    $elif tn_dir==3
+		n_cur_x--
+	    $(door) |= ((IN_TOP) << ((tn_dir+2) % 4))
+    ret:
+
+subcode: backtracker_find_ways
+    $(for:i in 0,1,2,3)
+	$(if:i=0)
+	    $(export:j=2)
+	    $(export:next=[n_cur_x+n_cur_y*n_x-n_x])
+	$(elif:i=1)
+	    $(export:j=3)
+	    $(export:next=[n_cur_x+n_cur_y*n_x+1])
+	$(elif:i=2)
+	    $(export:j=0)
+	    $(export:next=[n_cur_x+n_cur_y*n_x+n_x])
+	$(elif:i=3)
+	    $(export:j=1)
+	    $(export:next=[n_cur_x+n_cur_y*n_x-1])
+
+	$if !($(door) & (IN_TOP<<$(i)))
+	    $if !($(door) & (OUT_TOP<<$(i)))
+		$if !($(wall) & (WALL_TOP<<$(i)))
+		    $if pc_doors$(next) & 0xf
+			$(wall) |= (WALL_TOP << $(i))
+			pc_maze$(next) |= (WALL_TOP << $(j))
+		    $else
+			pc_ways[n_ways++]=$(i)
+
+# ---- Kruskal's algorithm ----------------------------------------
+fncode: maze_create_kruskal
+    $global pn_sets, pn_edges
+    # ---- Indexed cell list
+    $local_allocate(n_x*n_y, i) pn_sets
+    # ---- Indexed edge list (each cells has left and top edges)
+    $local_allocate(n_x*n_y*2, i) pn_edges
+    # ---- Remove walls from the edgelist
+    # left wall
+    $for j=0:n_y
+	pn_edges[(n_x*j)*2]=-1
+    # top wall
+    $for i=0:n_x
+	pn_edges[i*2+1]=-1
+    # ---- Randomize the edgelist
+    $for i=0:n_x*n_y*2
+	tn_a=pn_edges[i]
+	j=irand(n_x*n_y*2)
+	pn_edges[i]=pn_edges[j]
+	pn_edges[j]=tn_a
+    # ---- Foreach edge
+    $for i=0:n_x*n_y*2
+	# -- Find cell number in tn_a1/tn_a2
+	tn_a=pn_edges[i]
+	tn_a1=tn_a>>1
+	$if tn_a==-1
+	    continue
+	tn_a2=tn_a1
+	$if (tn_a & 1) == 0
+	    tn_a2--
+	$else
+	    tn_a2-=n_x
+	# -- Find group number in tn_b1/tn_b2
+	tn_b1=get_set(tn_a1)
+	tn_b2=get_set(tn_a2)
+	$if tn_b1!=tn_b2
+	    # join sets
+	    pn_sets[tn_b1]=tn_b2
+	$else
+	    # build wall
+	    tn_xx=tn_a1 % n_x
+	    tn_yy=tn_a1 / n_x
+	    $if (tn_a & 1) == 0
+		pc_maze[tn_xx+tn_yy*n_x] |= WALL_LEFT
+		pc_maze[tn_xx+tn_yy*n_x-1] |= WALL_RIGHT
+	    $else
+		pc_maze[tn_xx+tn_yy*n_x] |= WALL_TOP
+		pc_maze[tn_xx+tn_yy*n_x-n_x] |= WALL_BOTTOM
+
+subcode:: function_list
+    $list get_set
+
+fncode: get_set(tn_k)
+    $if pn_sets[tn_k] == tn_k
+	return tn_k
+    $else
+	tn_l=get_set(pn_sets[tn_k])
+	pn_sets[tn_k]=tn_l
+	return tn_l
+
+# ---- Draw the maze ---------------------------------------------
+subcode: maze_draw
+    # ---- internal -----------------
+    &call foreach_mazecell
+	pu2_temp=pu2_fb_buf+i*n_cx+(j*n_cx*display_width)+n_offset*display_width+n_offset
+	$if pc_maze[k] & WALL_TOP
+	    $for tn_k=0:n_cx
+		pu2_temp[tn_k]=u2_color_edge
+	$if pc_maze[k] & WALL_RIGHT
+	    $for tn_k=0:n_cx
+		pu2_temp[tn_k*display_width+n_cx-1]=u2_color_edge
+	$if pc_maze[k] & WALL_BOTTOM
+	    $for tn_k=0:n_cx
+		pu2_temp[tn_k+(n_cx-1)*display_width]=u2_color_edge
+	$if pc_maze[k] & WALL_LEFT
+	    $for tn_k=0:n_cx
+		pu2_temp[tn_k*display_width]=u2_color_edge
+    # ---- outside wall -----------------
+    tn_thick=2
+    $if tn_thick<n_offset
+	tn_thick=n_offset
+    $(set:off1=n_offset-tn_thick)
+    $(set:offx=n_offset+n_cx*n_x)
+    $(set:offy=n_offset+n_cx*n_y)
+    $(set:lx=n_cx*n_x+tn_thick*2)
+    $(set:ly=n_cx*n_y+tn_thick*2)
+    $call fillrect, $(off1), $(off1), tn_thick, $(ly), u2_color_wall
+    $call fillrect, $(off1), $(off1), $(lx), tn_thick, u2_color_wall
+    $call fillrect, $(offx), $(off1), tn_thick, $(ly), u2_color_wall
+    $call fillrect, $(off1), $(offy), $(lx), tn_thick, u2_color_wall
+    # ---- doors ------------------
+    $call maze_draw_door, start
+    $call maze_draw_door, finish
+
+subcode: maze_draw_door(start)
+    $(set:offx=n_offset+n_cx*n_$(start)_x+n_cx12)
+    $(set:offy=n_offset+n_cx*n_$(start)_y+n_cx12)
+    $(set:l=n_offset+n_cx-n_cx12)
+    $if n_$(start)_wall==0
+	$call fillrect, $(offx), 0, n_cx3, $(l), u2_color_door
+    $elif n_$(start)_wall==1
+	$call fillrect, $(offx), $(offy), $(l), n_cx3, u2_color_door
+    $elif n_$(start)_wall==2
+	$call fillrect, $(offx), $(offy), n_cx3, $(l), u2_color_door
+    $elif n_$(start)_wall==3
+	$call fillrect, 0, $(offy), $(l), n_cx3, u2_color_door
+
+# ######### Walk the Maze ##################################################
+subcode: maze_walk_init
+    $struct(path) n_x, n_y, n_ways, n_dir
+    $allocate(n_x*n_y) pstpath
+
+    pc_maze[n_finish_x+n_finish_y*n_x] |= FINISH
+    n_reach_finish=0
+    n_path_i=0
+    n_cur_x=n_start_x
+    n_cur_y=n_start_y
+    $call maze_walk_visit, 0
+
+subcode: maze_walk_finish
+    free(pstpath)
+
+subcode: maze_walk
+    $if pstpath[n_path_i].n_dir
+	# revisit
+	tn_ways=pstpath[n_path_i].n_ways
+    $else
+	# first visit
+	tn_ways=0
+	$for i=0:4
+	    tn_dir=0x1<<i
+	    $call maze_walk_check, tn_dir
+	$if tn_ways==0
+	    $call maze_walk_find_dead_region
+    $if tn_ways==0
+	$call maze_walk_backtrack
+    $else
+	$local pc_dir[4]
+	$call maze_walk_sort_dir
+	$for i=0:4
+	    tn_dir=pc_dir[i]
+	    $if tn_dir & tn_ways
+		$call maze_walk_forward
+		break
+
+subcode: maze_walk_sort_dir
+    tn_dx=n_finish_x-n_cur_x
+    tn_dy=n_finish_y-n_cur_y
+    $if tn_dy<0
+	pc_dir[0]=DIR_TOP
+	pc_dir[3]=DIR_BOTTOM
+    $else
+	pc_dir[0]=DIR_BOTTOM
+	pc_dir[3]=DIR_TOP
+    $if tn_dx>0
+	pc_dir[1]=DIR_RIGHT
+	pc_dir[2]=DIR_LEFT
+    $else
+	pc_dir[1]=DIR_LEFT
+	pc_dir[2]=DIR_RIGHT
+    $if abs(tn_dx)>abs(tn_dy)
+	$call swap, pc_dir[0], pc_dir[1], tn_dir
+	$call swap, pc_dir[2], pc_dir[3], tn_dir
+
+subcode: maze_walk_random_dir
+    tn_dir=0x1<<irand(4)
+    $for i=0:4
+	pc_dir[i]=tn_dir
+	tn_dir<<=1
+	$if tn_dir>0x8
+	    tn_dir=0x1
+
+subcode: maze_walk_visit(i)
+    #$dump(maze_walk_visit) $(i), n_cur_x, n_cur_y, tn_dir, tn_ways
+    pstpath[$(i)].n_x=n_cur_x
+    pstpath[$(i)].n_y=n_cur_y
+    pstpath[$(i)].n_dir=0
+    pc_maze[n_cur_x+n_cur_y*n_x] |= VISITED
+    $(if:i!=0)
+	maze_mark_cell(n_cur_x, n_cur_y, u2_color_visit, tn_dir)
+	$if pc_maze[n_cur_x+n_cur_y*n_x] & FINISH
+	    n_reach_finish=1
+
+subcode: maze_walk_forward
+    tn_ways &= ~tn_dir
+    pstpath[n_path_i].n_dir=tn_dir
+    pstpath[n_path_i].n_ways=tn_ways
+    $call get_dir_inc, tn_dir
+    n_cur_x+=tn_dx
+    n_cur_y+=tn_dy
+    n_path_i++
+    $call maze_walk_visit, n_path_i
+
+subcode: maze_walk_backtrack
+    $if n_path_i==0
+	n_reach_finish=1
+    $else
+	n_path_i--
+	maze_mark_cell(n_cur_x, n_cur_y, u2_color_backtrack, pstpath[n_path_i].n_dir)
+	n_cur_x=pstpath[n_path_i].n_x
+	n_cur_y=pstpath[n_path_i].n_y
+
+subcode: maze_walk_check(dir)
+    $call get_dir_inc, $(dir)
+    $if !(pc_maze[n_cur_x+n_cur_y*n_x] & $(dir))
+	$if !(pc_maze[n_cur_x+tn_dx+(n_cur_y+tn_dy)*n_x] & VISITED)
+	    $if !check_dead_end(n_cur_x+tn_dx, n_cur_y+tn_dy, $(dir), u2_color_deadend)
+		tn_ways |= $(dir)
+    $(block:global_init)
+	$list check_dead_end
+
+fncode: check_dead_end(tn_x, tn_y, tn_dir, u2_color)
+    $(set:cell=pc_maze[tn_x+tn_y*n_x])
+    $if ($(cell) & FINISH)
+	return 0
+    $if tn_dir <= 0x2
+	tn_dir_from=tn_dir<<2
+    $else
+	tn_dir_from=tn_dir>>2
+    tn_x2=tn_x
+    tn_y2=tn_y
+    tn_cnt=0
+    $if tn_dir_from != DIR_TOP
+	$if !($(cell) & WALL_TOP)
+	    tn_dir2=DIR_TOP
+	    tn_y2--
+	    tn_cnt++
+    $if tn_dir_from != DIR_RIGHT
+	$if !($(cell) & WALL_RIGHT)
+	    tn_dir2=DIR_RIGHT
+	    tn_x2++
+	    tn_cnt++
+    $if tn_dir_from != DIR_BOTTOM
+	$if !($(cell) & WALL_BOTTOM)
+	    tn_dir2=DIR_BOTTOM
+	    tn_y2++
+	    tn_cnt++
+    $if tn_dir_from != DIR_LEFT
+	$if !($(cell) & WALL_LEFT)
+	    tn_dir2=DIR_LEFT
+	    tn_x2--
+	    tn_cnt++
+
+    tn_ret=0
+    $if tn_cnt==0
+	tn_ret=1
+    $elif tn_cnt==1
+	tn_ret= check_dead_end(tn_x2, tn_y2, tn_dir2, u2_color)
+
+    $if tn_ret
+	$(cell) |= VISITED
+	maze_mark_cell(tn_x, tn_y, u2_color, tn_dir)
+	#$call fb_flush
+	return 1
+    $else
+	return 0
+    
+
+subcode: maze_walk_find_dead_region
+    $call maze_walk_find_open_region
+    &call foreach_mazecell
+	$if pc_maze[k] & OPEN
+	    pc_maze[k] &= ~OPEN
+	$elif !(pc_maze[k] & VISITED)
+	    #$dump(dead) i, j
+	    pc_maze[k] |= VISITED
+	    maze_fill_cell(i, j, u2_color_dead)
+	    #$call fb_flush
+
+subcode: maze_walk_find_open_region
+    $local pn_queue, tn_last
+    $local_allocate(n_x*n_y*2) pn_queue
+    pn_queue[0]=n_finish_x
+    pn_queue[1]=n_finish_y
+    pc_maze[n_finish_x+n_finish_y*n_x] |= OPEN
+    tn_last=2
+    $while tn_last>0
+	tn_last-=2
+	tn_x=pn_queue[tn_last]
+	tn_y=pn_queue[tn_last+1]
+	$call maze_walk_add_open, tn_x-1, tn_y, tn_x>0
+	$call maze_walk_add_open, tn_x+1, tn_y, tn_x+1<n_x
+	$call maze_walk_add_open, tn_x, tn_y-1, tn_y>0
+	$call maze_walk_add_open, tn_x, tn_y+1, tn_y+1<n_y
+
+subcode: maze_walk_add_open(x, y, cond)
+
+    $if $(cond) && !( pc_maze[$(x)+($(y))*n_x] & (VISITED|OPEN))
+	pn_queue[tn_last]=$(x)
+	pn_queue[tn_last+1]=$(y)
+	pc_maze[$(x)+($(y))*n_x] |= OPEN
+	tn_last+=2
+
+fncode: maze_mark_cell(tn_x, tn_y, tu2_color, tn_dir)
+    $(mset:x=tn_x,y=tn_y,color=tu2_color,dir=tn_dir)
+    $if $(dir)==DIR_TOP
+	$call fillrect, n_offset+n_cx*$(x)+n_cx12, n_offset+n_cx*$(y)+n_cx12, n_cx3, n_cx, $(color)
+    $elif $(dir)==DIR_RIGHT
+	$call fillrect, n_offset+n_cx*$(x)-n_cx12, n_offset+n_cx*$(y)+n_cx12, n_cx, n_cx3, $(color)
+    $elif $(dir)==DIR_BOTTOM
+	$call fillrect, n_offset+n_cx*$(x)+n_cx12, n_offset+n_cx*$(y)-n_cx12, n_cx3, n_cx, $(color)
+    $elif $(dir)==DIR_LEFT
+	$call fillrect, n_offset+n_cx*$(x)+n_cx12, n_offset+n_cx*$(y)+n_cx12, n_cx, n_cx3, $(color)
+    $else
+	$call fillrect, n_offset+n_cx*$(x)+n_cx12, n_offset+n_cx*$(y)+n_cx12, n_cx3, n_cx3, $(color)
+
+fncode: maze_fill_cell(tn_x, tn_y, tu2_color)
+    $(mset:l1=n_cx12+n_cx1,l2=n_cx-n_cx1-n_cx1)
+    $(set:wall=pc_maze[tn_x+tn_y*n_x])
+    $(set:offx=n_offset+n_cx*tn_x)
+    $(set:offy=n_offset+n_cx*tn_y)
+    $(set:color=tu2_color)
+
+    $call fillrect, $(offx)+n_cx1, $(offy)+n_cx1, $(l2), $(l2), $(color)
+
+    $if !($(wall) & WALL_TOP)
+	$call fillrect, $(offx)+n_cx1, $(offy)-n_cx12, $(l2), $(l1), $(color)
+    $if !($(wall) & WALL_RIGHT)
+	$call fillrect, $(offx)+n_cx-n_cx1, $(offy)+n_cx1, $(l1), $(l2), $(color)
+    $if !($(wall) & WALL_BOTTOM)
+	$call fillrect, $(offx)+n_cx1, $(offy)+n_cx-n_cx1, $(l2), $(l1), $(color)
+    $if !($(wall) & WALL_LEFT)
+	$call fillrect, $(offx)-n_cx12, $(offy)+n_cx1, $(l1), $(l2), $(color)
+
+subcode: get_dir_inc(dir)
+    $if $(dir)==DIR_TOP
+	tn_dx=0
+	tn_dy=-1
+    $if $(dir)==DIR_RIGHT
+	tn_dx=1
+	tn_dy=0
+    $if $(dir)==DIR_BOTTOM
+	tn_dx=0
+	tn_dy=1
+    $if $(dir)==DIR_LEFT
+	tn_dx=-1
+	tn_dy=0
+
+subcode: foreach_mazecell
+    k=0
+    $for j=0:n_y
+	$for i=0:n_x
+	    BLOCK
+	    k++
+# -------------------
+subcode: swap(a, b, temp)
+    $(temp)=$(a)
+    $(a)=$(b)
+    $(b)=$(temp)
