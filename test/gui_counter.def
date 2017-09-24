@@ -1,0 +1,27 @@
+include: java/awt.def
+
+page: AWTCounter, gui_frame
+    module: java
+
+    setLayout(new FlowLayout());
+
+    $private lbl_counter, txt_count, btn_count
+    lbl_counter = new Label("Counter")
+    txt_count   = new TextField("0", 10)
+    btn_count   = new Button("Count")
+    $(for:lbl_counter, txt_count, btn_count)
+        add($1)
+
+    # Clicking "btnCount" invokes actionPerformed().
+    $implements ActionListener
+    btn_count.addActionListener(this)
+
+    setTitle("AWT Counter");
+    setSize(250, 100);
+    setVisible(true);
+
+fncode: actionPerformed(ActionEvent evt)
+    $private n_count =0
+    n_count++
+    txt_count.setText( $(itoa:n_count))
+

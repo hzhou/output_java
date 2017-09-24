@@ -1,0 +1,34 @@
+subcode: gui_frame
+    $import java.awt.*
+    $import java.awt.event.*
+    $extends Frame
+    # $implements ActionListener
+
+    $list _gui_init, _gui_main
+
+fncode: _gui_init
+    $skip_autolist
+    $call main2
+    $call default_window_events
+
+fncode: _gui_main(main)
+    $skip_autolist
+    app = new $(_pagename)()
+
+# -----------
+subcode: _autoload
+    $register_prefix(lbl) Label
+    $register_prefix(btn) Button
+    $register_prefix(txt) TextField
+
+
+subcode: default_window_events
+    $implements WindowListener
+    addWindowListener(this)
+
+    $function windowClosing(WindowEvent evt)
+        System.exit(0)
+    $(for:Opened,Closed,Iconified,Deiconified,Activated,Deactivated)
+        $function window$1(WindowEvent evt)
+            NOOP
+

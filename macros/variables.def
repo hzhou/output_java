@@ -1,0 +1,43 @@
+subcode:: java_init
+    $(for:public,private)
+        $global $$1_hash, $$1_list
+        $$1_hash={}
+        $$1_list=[]
+
+subcode:: java_parse
+    $elif $l=~/^\$\b(global|public|private)\s*(.*)/
+        my $param=$2
+        my ($h, $l)
+        $if $1 eq "public"
+            ($h, $l)=($public_hash, $public_list)
+        $elif $1 eq "private"
+            ($h, $l)=($private_hash, $private_list)
+        $else
+            $call warn, "\$$1 not supported in java, use \$public or \$private\n"
+            return
+
+        $param=~s/\s*;\s*$//
+        my @vlist = MyDef::utils::proper_split($param)
+        $foreach $v in @vlist
+            $(super:f_add_var)($h, $l, $v)
+            $$(super:global_hash)->{$v}=1
+        return
+
+#----------------------------------------------- 
+subcode:: java_parse
+    $elif $l=~/^(\w+)\s*=\s*new\s*(\w+)\s*(.*)\s*;?/
+        my ($v, $cls, $p)=($1, $2, $3)
+        $(super:auto_add_var)($v, $cls)
+
+        $if !$p
+            push @$out, "$v = new $cls();"
+        $elif $p=~/^\((.*)\)/
+            push @$out, "$v = new $cls($1);"
+        $else
+            push @$out, "$v = new $cls($p);"
+
+        $if $common_classes{$cls}
+            add_import($common_classes{$cls})
+
+        return
+

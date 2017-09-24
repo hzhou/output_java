@@ -1,4 +1,5 @@
 include: output.def
+include: macros/variables.def
 include: macros/print.def
 include: macros/type.def
 
@@ -7,13 +8,10 @@ page: output_java, inherit, c
     ext: java
     package: MyDef::output_java
 
-    subcode: on_init
-        $(if:0)
-            $if !$page->{package}
-                $if $page->{outdir}=~/^[^\/\.]/
-                    $page->{package}=$page->{outdir}
-                    $page->{package}=~s/\//./g
+    subcode: on_init_pre
+        $page->{autolist}=1
 
+    subcode: on_init
         $call @java_init
 
     #-------------------
@@ -25,23 +23,15 @@ page: output_java, inherit, c
         $elif $l=~/^\$print\s*(.*)/
             parse_print($1)
             return
-        $elif $l=~/^(\w+)\s*=\s*new\s*(\w+)\s*(.*)\s*;?/
-            my ($v, $cls, $p)=($1, $2, $3)
-            $if !$p
-                push @$out, "$cls $v = new $cls();"
-            $elif $p=~/^\((.*)\)/
-                push @$out, "$cls $v = new $cls($1);"
-            $else
-                push @$out, "$cls $v = new $cls($p);"
-
-            $if $common_classes{$cls}
-                add_import($common_classes{$cls})
-
-            return
-
+        $call @java_parse
     #--------------------
     subcode: on_dumpout
+        my $page=$$(super:page)
+        $if $page->{package}
+            push @$f, "package $page->{package};\n"
+        $call dump_import
         $call class_wrap
+        $call dump_public_private
 
         my $funclist=\@$(super:function_list)
         $foreach $func in @$funclist
@@ -49,14 +39,27 @@ page: output_java, inherit, c
             $func->{skip_declare}=1
             $func->{processed}=1
 
+        MyDef::dumpout::dumpout({out=>$out,f=>$f})
+        return
+
         # -------------------
         subcode: class_wrap
-            my $page=$$(super:page)
-            $if $page->{package}
-                push @$f, "package $page->{package};\n"
-            $call @java_dump
-            unshift @$out, "public class $page->{_pagename} {\n", "INDENT"
+            my $t = "public class $page->{_pagename}"
+            $call class_extends_implements
+
+            push @$f, "$t {\n"
+
+            unshift @$out, "INDENT"
             push @$out, "DEDENT", "}\n"
+
+        subcode: dump_public_private
+            $(for:public,private)
+                $if @$$1_list
+                    $foreach $name in @$$1_list
+                        my $v = $$1_hash->{$name}
+                        my $decl=$(super:var_declare)($v)
+                        push @$f, "    $1 $decl;\n"
+                    push @$f, "\n"
 
         subcode: process_function_java
             my $name=$func->{name}
@@ -64,14 +67,17 @@ page: output_java, inherit, c
                 $func->{skip_makefile}=1
                 $func->{ret_type}="public static void"
                 $func->{param_list}=["String[] args"]
+            $elif $name =~/(\w*)_init/
+                $func->{ret_type}="public"
+                $func->{name}=$page->{_pagename}
             $else
                 $if !$func->{ret_type}
                     $func->{ret_type}="void"
-                $func->{ret_type}="public static $func->{ret_type}"
+                $func->{ret_type}="public $func->{ret_type}"
 
             $(super:process_function_std)($func)
 
-#---------------------------------------- 
+#---- import ---------------------------- 
 subcode:: java_init
     $global @import_list, %import_hash
     @import_list=()
@@ -82,13 +88,32 @@ fncode: add_import($l)
         $import_hash{$l}=1
         push @import_list, $l
 
-subcode:: java_dump
+subcode: dump_import
     $if @import_list
         push @$f, "\n"
         $foreach $imp in @import_list
             push @$f, "import $imp;\n"
+        push @$f, "\n"
 
+#---- extends, implements
+subcode:: java_init
+    $global @extends, @implements
+    @extends=()
+    @implements=()
 
+subcode:: java_parse
+    $elif $l=~/^\$extends\s*(.+)/
+        push @extends, $1
+        return
+    $elif $l=~/^\$implements\s*(.+)/
+        push @implements, $1
+        return
+
+subcode: class_extends_implements
+    $if @extends
+        $t .= " extends ".join(", ", @extends)
+    $if @implements
+        $t .= " implements ".join(", ", @implements)
 #---------------------------------------- 
 subcode: _autoload
     $global %common_classes

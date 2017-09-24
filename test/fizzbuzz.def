@@ -9,4 +9,4 @@ page: fizzbuzz, basic_frame
         $elif i%7==0
             $print "buzz -"
         $else
-            $print i+ " -"
+            $print $i -

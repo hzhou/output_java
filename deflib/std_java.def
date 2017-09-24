@@ -1,12 +1,19 @@
+# basic_frame for console prog, gui_frame for awt prog
+#   Single class library don't need use frame
+
+#----------------------------------------
 subcode: basic_frame
     $list _basic_main
 
 fncode: _basic_main(main)
+    $skip_autolist
     $call main2
 
 #----------------------------------------
 macros:
     atoi: Integer.parseInt($1)
     atof: Double.parseDouble($1)
+
+    itoa: Integer.toString($1)
 
 
