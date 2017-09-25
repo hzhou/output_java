@@ -23,6 +23,8 @@ page: output_java, inherit, c
         $elif $l=~/^\$print\s*(.*)/
             parse_print($1)
             return
+        $elif $l=~/^\$foreach\s*(.+) in (.+)/
+            return $(super:single_block)("for($1 : $2){", "}")
         $call @java_parse
     #--------------------
     subcode: on_dumpout
@@ -115,9 +117,3 @@ subcode: class_extends_implements
     $if @implements
         $t .= " implements ".join(", ", @implements)
 #---------------------------------------- 
-subcode: _autoload
-    $global %common_classes
-    %common_classes=(
-        Random => "java.util.Random",
-    );
-

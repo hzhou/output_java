@@ -35,7 +35,12 @@ subcode:: java_parse
 subcode:: java_parse
     $elif $l=~/^(\w+)\s*=\s*new\s*(\w+)\s*(.*)\s*;?/
         my ($v, $cls, $p)=($1, $2, $3)
-        $(super:auto_add_var)($v, $cls)
+        my $type = $cls
+        $if $p=~/<(.*?)>(.*)/
+            $type = "$cls<$1>"
+            $cls = "$cls<>"
+            $p = $2
+        $(super:auto_add_var)($v, $type)
 
         $if !$p
             push @$out, "$v = new $cls();"
@@ -48,4 +53,11 @@ subcode:: java_parse
             add_import($common_classes{$cls})
 
         return
+
+subcode: _autoload
+    $global %common_classes
+    %common_classes=(
+        Random => "java.util.Random",
+        "ArrayList<>" => "java.util.*",
+    );
 

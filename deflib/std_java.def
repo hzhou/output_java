@@ -10,6 +10,35 @@ fncode: _basic_main(main)
     $call main2
 
 #----------------------------------------
+subcode: input(@file)
+    $import java.io.*
+    try{
+        $(if:file=)
+            $(set:in=new InputStreamReader(System.in))
+        $(else)
+            $(set:in=new FileReader($(file)))
+        $local BufferedReader In = new BufferedReader($(in))
+        BLOCK
+    }
+    catch(Exception e){
+    }
+
+    subcode: get_s
+        s = In.readLine()
+
+subcode: scanner
+    $import java.io.*
+    $import java.util.Scanner
+    try{
+        scanner = new Scanner(new BufferedReader(new InputStreamReader(System.in)))
+        BLOCK
+    }
+    finally{
+        $if scanner != null
+            scanner.close()
+    }
+
+#----------------------------------------
 macros:
     atoi: Integer.parseInt($1)
     atof: Double.parseDouble($1)

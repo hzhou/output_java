@@ -1,3 +1,6 @@
+subcode:: _autoload
+    $MyDef::output_c::var_fmts{String} = '%s'
+
 fncode: parse_print($param)
     $global $print_type=1
     $if !$param
