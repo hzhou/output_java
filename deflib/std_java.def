@@ -23,20 +23,33 @@ subcode: input(@file)
     catch(Exception e){
     }
 
-    subcode: get_s
-        s = In.readLine()
+    subcode: get_s(v)
+        $(v) = In.readLine()
 
-subcode: scanner
+subcode: scanner(@file)
     $import java.io.*
     $import java.util.Scanner
     try{
-        scanner = new Scanner(new BufferedReader(new InputStreamReader(System.in)))
+        $(if:file=)
+            $(set:in=new InputStreamReader(System.in))
+        $(else)
+            $(set:in=new FileReader($(file)))
+        scanner = new Scanner(new BufferedReader($(in)))
         BLOCK
     }
     finally{
         $if scanner != null
             scanner.close()
     }
+
+    subcode: get_s(v)
+        $(v) = scanner.nextLine()
+
+    subcode: get_int(v)
+        $(v) = scanner.nextInt()
+
+    subcode: get_double(v)
+        $(v) = scanner.nextDouble()
 
 #----------------------------------------
 macros:
