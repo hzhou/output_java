@@ -3,6 +3,8 @@ subcode:: java_init
         $global $$1_hash, $$1_list
         $$1_hash={}
         $$1_list=[]
+    push @$(super:scope_stack), {var_hash=>$public_hash, var_list=>$public_list}
+    push @$(super:scope_stack), {var_hash=>$private_hash, var_list=>$private_list}
 
 subcode:: java_parse
     $elif $l=~/^\$\b(global|public|private)\s*(.*)/
@@ -40,12 +42,16 @@ subcode:: java_parse
             $type = "$cls<$1>"
             $cls = "$cls<>"
             $p = $2
+        $elif $p=~/\[(.*?)\](.*)/
+            $type = "$cls"."[]"
         $(super:auto_add_var)($v, $type)
 
         $if !$p
             push @$out, "$v = new $cls();"
         $elif $p=~/^\((.*)\)/
-            push @$out, "$v = new $cls($1);"
+            push @$out, "$v = new $cls$p;"
+        $elif $p=~/^\[(.*)\]/
+            push @$out, "$v = new $cls$p;"
         $else
             push @$out, "$v = new $cls($p);"
 

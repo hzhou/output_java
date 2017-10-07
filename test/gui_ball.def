@@ -20,8 +20,8 @@ page: test, gui_frame
     setSize(n_w, n_h);
     setVisible(true);
 
-fncode: paint(Graphics g)
-    super.paint(g)
+    fncode: paint(Graphics g)
+        super.paint(g)
 
-    g.setColor(Color.blue);
-    g.fillOval(i_x-n_r, i_y-n_r, n_r*2, n_r*2); 
+        g.setColor(Color.blue);
+        g.fillOval(i_x-n_r, i_y-n_r, n_r*2, n_r*2); 

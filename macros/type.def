@@ -1,6 +1,6 @@
 subcode:: java_init
     %$(super:type_name)=(
-        c=>"char",
+        c=>"byte",
         d=>"double",
         f=>"float",
         i=>"int",

@@ -9,7 +9,7 @@ page: output_java, inherit, c
     package: MyDef::output_java
 
     subcode: on_init_pre
-        $page->{autolist}=1
+        $page->{autolist}="page"
 
     subcode: on_init
         $call @java_init
@@ -34,6 +34,8 @@ page: output_java, inherit, c
         $call dump_import
         $call class_wrap
         $call dump_public_private
+
+        $call dump_structs
 
         my $funclist=\@$(super:function_list)
         $foreach $func in @$funclist
@@ -73,11 +75,30 @@ page: output_java, inherit, c
                 $func->{ret_type}="public"
                 $func->{name}=$page->{_pagename}
             $else
-                $if !$func->{ret_type}
-                    $func->{ret_type}="void"
-                $func->{ret_type}="public $func->{ret_type}"
+                $if $func->{ret_type} and $func->{ret_type}=~/^(public|private)/
+                    NOOP
+                $else
+                    $if !$func->{ret_type}
+                        $func->{ret_type}="void"
+
+                    $if $$(super:function_autolist){$name} eq "global"
+                        $func->{ret_type}="public static $func->{ret_type}"
+                    $else
+                        $func->{ret_type}="public $func->{ret_type}"
 
             $(super:process_function_std)($func)
+
+        subcode: dump_structs
+            $foreach $name in @$(super:struct_list)
+                my $st = $$(super:structs){$name}
+                my $h  = $st->{hash}
+                push @$out, "\n";
+                push @$out, "class $name {\n"
+                my $sp = '    '
+                $foreach $p in @{$st->{list}}
+                    my $type = $h->{$p}->{type}
+                    push @$out, "    public $type $p;\n"
+                push @$out, "};\n"
 
 #---- import ---------------------------- 
 subcode:: java_init

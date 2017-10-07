@@ -1,15 +1,13 @@
 # basic_frame for console prog, gui_frame for awt prog
-#   Single class library don't need use frame
+#   Single class library don't need use frame [$list ...]
 
-#----------------------------------------
 subcode: basic_frame
     $list _basic_main
 
 fncode: _basic_main(main)
-    $skip_autolist
     $call main2
 
-#----------------------------------------
+#---- BufferedReader ----
 subcode: input(@file)
     $import java.io.*
     try{
@@ -26,6 +24,7 @@ subcode: input(@file)
     subcode: get_s(v)
         $(v) = In.readLine()
 
+#---- Scanner ----
 subcode: scanner(@file)
     $import java.io.*
     $import java.util.Scanner
@@ -44,6 +43,9 @@ subcode: scanner(@file)
 
     subcode: get_s(v)
         $(v) = scanner.nextLine()
+
+    subcode: get_word(v)
+        $(v) = scanner.next()
 
     subcode: get_int(v)
         $(v) = scanner.nextInt()

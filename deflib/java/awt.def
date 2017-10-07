@@ -7,12 +7,10 @@ subcode: gui_frame
     $list _gui_init, _gui_main
 
 fncode: _gui_init
-    $skip_autolist
     $call main2
     $call default_window_events
 
 fncode: _gui_main(main)
-    $skip_autolist
     app = new $(_pagename)()
 
 # -----------
@@ -50,7 +48,6 @@ subcode: animate(millisec)
     $list actionPerformed
 
 fncode: actionPerformed(ActionEvent evt)
-    $skip_autolist
+    $return_type public void
     s_cmd = evt.getActionCommand()
     DUMP_STUB _actionPerformed
-    $call @on_action
