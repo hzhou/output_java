@@ -2,13 +2,20 @@ include: java/awt.def
 
 page: test, gui_frame
     module: java
+    title: Test Canvas
+    size: 820, 650
 
-    $private n_w, n_h = 800, 600
-    $private n_r = 100
-    $private i_x, i_y =  n_r, n_r
-    $private n_dx, n_dy = 1, 1
+    $private n_w=800, n_h=600
+    $private n_r = 50
+    $private i_x = n_r, i_y =  n_r
+    $private n_dx = 2, n_dy = 2
 
-    &call animate, 20
+    &call add_canvas, canvas, n_w, n_h
+        g.setColor(Color.blue);
+        g.fillOval(i_x-n_r, i_y-n_r, n_r*2, n_r*2); 
+    canvas.setBackground(Color.GRAY)
+
+    &call animate, 20, 500
         i_x+=n_dx
         i_y+=n_dy
         $if i_x+n_r>n_w || i_x-n_r<0
@@ -16,12 +23,5 @@ page: test, gui_frame
         $if i_y+n_r>n_h || i_y-n_r<0
             n_dy = -n_dy
 
-    setTitle("Test Paint");
-    setSize(n_w, n_h);
-    setVisible(true);
+        canvas.repaint()
 
-    fncode: paint(Graphics g)
-        super.paint(g)
-
-        g.setColor(Color.blue);
-        g.fillOval(i_x-n_r, i_y-n_r, n_r*2, n_r*2); 

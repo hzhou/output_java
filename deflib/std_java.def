@@ -12,6 +12,7 @@ subcode: input(@file)
     $import java.io.*
     try{
         $(if:file=)
+            # InputStreamReader wraps byte stream into char stream
             $(set:in=new InputStreamReader(System.in))
         $(else)
             $(set:in=new FileReader($(file)))
@@ -28,18 +29,12 @@ subcode: input(@file)
 subcode: scanner(@file)
     $import java.io.*
     $import java.util.Scanner
-    try{
-        $(if:file=)
-            $(set:in=new InputStreamReader(System.in))
-        $(else)
-            $(set:in=new FileReader($(file)))
-        scanner = new Scanner(new BufferedReader($(in)))
-        BLOCK
-    }
-    finally{
-        $if scanner != null
-            scanner.close()
-    }
+    $(if:file=)
+        $(set:in=System.in)
+    $(else)
+        $(set:in=new FileReader($(file)))
+    scanner = new Scanner($(in))
+    BLOCK
 
     subcode: get_s(v)
         $(v) = scanner.nextLine()

@@ -61,7 +61,7 @@ page: output_java, inherit, c
                 $if @$$1_list
                     $foreach $name in @$$1_list
                         my $v = $$1_hash->{$name}
-                        my $decl=$(super:var_declare)($v)
+                        my $decl="$v->{type} $v->{name}"
                         push @$f, "    $1 $decl;\n"
                     push @$f, "\n"
 

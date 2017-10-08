@@ -17,20 +17,15 @@ subcode:: java_parse
         $else
             $call warn, "\$$1 not supported in java, use \$public or \$private\n"
             return
-
-        $param=~s/\s*;\s*$//
-        my $value
-        $if $param=~/(.*?)\s*=\s*(.*)/
-            $param = $1
-            $value = $2
-        my @vlist = MyDef::utils::proper_split($param)
-        $foreach $v in @vlist
-            $(super:f_add_var)($h, $l, $v)
-            $$(super:global_hash)->{$v}=1
-        $if $value
-            my @tlist =MyDef::utils::proper_split($value)
-            $for $i=0:@vlist
-                push @$out, "$vlist[$i] = $tlist[$i];"
+        my @plist = MyDef::utils::proper_split($param)
+        $foreach $p in @plist
+            my $val
+            $if $p=~/(.*?)\s*=\s*(.*)/
+                $p=$1
+                $val = $2
+            my $name=$(super:f_add_var)($h, $l, $p)
+            $if $val
+                push @$out, "$p = $val;"
         return
 
 #----------------------------------------------- 

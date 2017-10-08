@@ -1,53 +1,121 @@
+macros:
+    Frm: Frame
+    Btn: Button
+    Lbl: Label
+    Txt: TextField
+
+#----------------------------------------------- 
 subcode: gui_frame
     $import java.awt.*
     $import java.awt.event.*
-    $extends Frame
-    # $implements ActionListener
+    $(if:swing)
+        $import javax.swing.*
+        $(setmacro:Frm=JFrame)
+        $(setmacro:Btn=JButton)
+        $(setmacro:Lbl=JLabel)
+        $(setmacro:Txt=JTextField)
 
     $list _gui_init, _gui_main
 
-fncode: _gui_init
-    $call main2
-    $call default_window_events
+perlcode: set_layout
+    $if $param=~/(left|center|right)(.*)/
+        my $align
+        $if $1 eq "left"
+            $align = "FlowLayout.LEADING"
+        $elif $1 eq "center"
+            $align = "FlowLayout.CENTER"
+        $elif $1 eq "right"
+            $align = "FlowLayout.TRAILING"
+        push @$out, "frame.setLayout(new FlowLayout($align$2));"
 
+fncode: _gui_init
+    $private $(Frm) frame
+    frame = new $(Frm)("$(title)")
+    $call default_window_events
+    $(if:align)
+        $call set_layout, $(align)
+    $(else)
+        frame.setLayout(new FlowLayout())
+    $Call main2
+
+    $(if:size)
+        frame.setSize($(size))
+    frame.setVisible(true)
+    # ----
+    subcode: default_window_events
+        # $implements WindowListener
+        frame.addWindowListener(new WindowAdapter(){
+            public void windowClosing(WindowEvent evt){
+                DUMP_STUB _exit
+                System.exit(0)
+            }
+        });
+
+    # -----------------------------
+    subcode: add_canvas(var, w, h)
+        $private Canvas $(var)
+        $(var) = new Canvas(){
+            public void paint(Graphics g){
+                BLOCK
+            }
+        };
+        $(var).setSize($(w), $(h))
+        frame.add($(var))
+
+    # -----------------------------
+    subcode: add_button(var, label)
+        $(if:var=-)
+            frame.add(new $(Btn)($(label)))
+        $(else)
+            $private $(Btn) $(var)
+            $(var) = new $(Btn)($(label))
+            frame.add($(var))
+
+    subcode: add_label(var, label)
+        $(if:var=-)
+            frame.add(new $(Lbl)($(label)))
+        $(else)
+            $private $(Lbl) $(var)
+            $(var) = new $(Lbl)($(label))
+            frame.add($(var))
+
+    subcode: add_text(var, init, size)
+        $(if:var=-)
+            frame.add(new $(Txt)($(init), $(size)))
+        $(else)
+            $private $(Txt) $(var)
+            $(var) = new $(Txt)($(init), $(size))
+            frame.add($(var))
+
+    subcode: add_space(w)
+        $import javax.swing.Box
+        frame.add(Box.createRigidArea(new Dimension($(w), 0)))
+
+    subcode: add_glue
+        $import javax.swing.Box
+        frame.add(Box.createHorizontalGlue())
+
+    subcode: add_listener(var)
+        $(var).addActionListener(new ActionListener(){
+            public void actionPerformed(ActionEvent evt){
+                BLOCK
+            }
+        });
+        
 fncode: _gui_main(main)
     app = new $(_pagename)()
 
-# -----------
-subcode: _autoload
-    $register_prefix(lbl) Label
-    $register_prefix(btn) Button
-    $register_prefix(txt) TextField
-
-
-subcode: default_window_events
-    $implements WindowListener
-    addWindowListener(this)
-
-    $function windowClosing(WindowEvent evt)
-        DUMP_STUB _exit
-        System.exit(0)
-    $(for:Opened,Closed,Iconified,Deiconified,Activated,Deactivated)
-        $function window$1(WindowEvent evt)
-            NOOP
-
-subcode: animate(millisec)
+#----------------------------------------------- 
+subcode: animate(millisec, delay)
     $import javax.swing.Timer
-    $implements ActionListener
+    # $implements ActionListener
     $private Timer timer
 
-    timer=new Timer($(millisec), this)
-    timer.setInitialDelay(2000)
-    timer.setActionCommand("timer")
-    timer.start()
-    $(block:_actionPerformed)
-        $if s_cmd == "timer"
+    timer=new Timer($(millisec), new ActionListener(){
+        public void actionPerformed(ActionEvent evt){
             BLOCK
-            repaint()
+        }
+    });
+    timer.setInitialDelay($(delay))
+    timer.start()
 
-    $list actionPerformed
-
-fncode: actionPerformed(ActionEvent evt)
-    $return_type public void
-    s_cmd = evt.getActionCommand()
-    DUMP_STUB _actionPerformed
