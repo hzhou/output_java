@@ -61,7 +61,9 @@ page: output_java, inherit, c
                 $if @$$1_list
                     $foreach $name in @$$1_list
                         my $v = $$1_hash->{$name}
-                        my $decl="$v->{type} $v->{name}"
+                        my $type = $v->{type}
+                        $type=~s/\*/[]/g
+                        my $decl="$type $v->{name}"
                         push @$f, "    $1 $decl;\n"
                     push @$f, "\n"
 
@@ -71,7 +73,7 @@ page: output_java, inherit, c
                 $func->{skip_makefile}=1
                 $func->{ret_type}="public static void"
                 $func->{param_list}=["String[] args"]
-            $elif $name =~/(\w*)_init/
+            $elif $name =~/^_(\w*)_init$/
                 $func->{ret_type}="public"
                 $func->{name}=$page->{_pagename}
             $else

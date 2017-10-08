@@ -43,6 +43,8 @@ subcode:: java_parse
 
         $if !$p
             push @$out, "$v = new $cls();"
+        $elif $p=~/\{\s*$/
+            push @$out, "$v = new $cls$p"
         $elif $p=~/^\((.*)\)/
             push @$out, "$v = new $cls$p;"
         $elif $p=~/^\[(.*)\]/

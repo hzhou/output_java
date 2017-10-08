@@ -22,7 +22,7 @@ subcode:: java_init
         n2=>"short",
         n4=>"int",
         n8=>"long",
-        c=>"char",
+        c=>"byte",
         b=>"boolean",
         s=>"String",
         f=>"double",
