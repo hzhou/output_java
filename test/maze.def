@@ -3,71 +3,79 @@ include: java/awt.def
 page: maze, gui_frame
     module: java
     title: Maze
-    size: 820, 650
+    size: 800, 600
+    fps: 5
+    end_pause: 10
 
-    $call init, 800, 600
+    $call init, $(size)
+    &call add_canvas, canvas, n_canvas_w, n_canvas_h
+        $call paint_maze
 
-    $(set:b=2)
-    &call add_canvas, canvas, n_w, n_h
-        $if pc_maze != null
-            $(set:b=n_cx1*2)
-            $call draw_maze_walls, $(b)
-            g.drawImage(b_img, $(b), $(b), this)
+    $private n_end_count 
+    n_end_count  = 9999
 
-    $private b_finished 
-    b_finished  = true
-
-    &call animate, 500, 1000
-	$if b_finished 
+    $(eval:t=int(1000/$(fps)))
+    &call animate, $(t), 1000
+        $(eval:n=$(fps)*$(end_pause))
+	$if n_end_count>$(n) 
             maze_create()
+            $call init_image
             maze_draw()
-            # $call maze_walk_init
-            b_finished=false
+            $call maze_walk_init
+            n_end_count=0
 	    timer.restart()
+        $elif n_end_count>0
+            n_end_count++
 	$else
-	    # $call maze_walk
+	    $call maze_walk
         canvas.repaint()
 
     # -----------------------
     fncode: maze_create
-        $call init_size
-        $call init_cx
-        $call init_image
+        $call maze_create_init
 
-        maze_initialize()
-        maze_create_backtracker()
-        $print $n_x x $n_y - [$n_start_wall, $n_start_x, $n_start_y] - [$n_finish_wall, $n_finish_x, $n_finish_y]
+    fncode: maze_draw
+        $call img_maze_draw
 
-        subcode: init_size
-            # requires n_w, n_h set
-            $private n_cx, n_x, n_y, n_w, n_h
+    fncode: maze_mark_cell(int x, int y, color, tn_dir)
+        $call img_mark_cell
+
+#---- Create ---------------------------------- 
+subcode: maze_create_init
+    $call init_size
+    $call init_cx
+
+    $call init_maze
+    $call maze_create_backtracker
+    $print $n_x x $n_y - [$n_start_wall, $n_start_x, $n_start_y] - [$n_finish_wall, $n_finish_x, $n_finish_y]
+
+    subcode: init_size
+        # requires n_w, n_h set
+        $private n_cx, n_x, n_y, n_w, n_h
+        $(if:1)
             n_cx = $(irand:60) + 6
-            n_x  = (n_w-n_cx/2)/n_cx
-            n_y  = (n_h-n_cx/2)/n_cx
-            n_w = n_x * n_cx
-            n_h = n_y * n_cx
-            
-        subcode: init_cx
-            $private n_cx1, n_cx2, n_cx12, n_cx3
-            $if n_cx>8
-                # wall thickness
-                n_cx1=n_cx/4/2 
-                # spacer
-                n_cx2=n_cx/4/2
-            $else
-                n_cx1=1
-                n_cx2=1
-            n_cx12=n_cx1+n_cx3
-            n_cx3=n_cx-(n_cx1+n_cx2)*2
-
-    subcode: init_image
-        $import java.awt.image.BufferedImage
-        $private BufferedImage b_img, Graphics2D g_img
-        b_img = new BufferedImage(n_w, n_h, BufferedImage.TYPE_4BYTE_ABGR)
-        g_img = b_img.createGraphics()
+        $(else)
+            n_cx = 50
+        n_x  = (n_canvas_w-n_cx/2)/n_cx
+        n_y  = (n_canvas_h-n_cx/2)/n_cx
+        n_w = n_x * n_cx
+        n_h = n_y * n_cx
+        
+    subcode: init_cx
+        $private n_cx1, n_cx2, n_cx12, n_cx3
+        $if n_cx>8
+            # wall thickness
+            n_cx1=n_cx/4/2 
+            # spacer
+            n_cx2=n_cx/4/2
+        $else
+            n_cx1=1
+            n_cx2=1
+        n_cx12=n_cx1+n_cx2
+        n_cx3=n_cx-(n_cx1+n_cx2)*2
 
     # ----------------------
-    fncode: maze_initialize
+    subcode: init_maze
         $private pc_maze
         pc_maze = new byte[n_x*n_y]
 
@@ -79,11 +87,14 @@ page: maze, gui_frame
 
         subcode: maze_init_wall
             $for i=0:n_x
-                $call set_wall, TOP, pc_maze[i]
-                $call set_wall, BOTTOM, pc_maze[i+(n_y-1)*n_x]
+                $call set_wall, TOP, i
+                $call set_wall, BOTTOM, i+(n_y-1)*n_x
             $for j=0:n_y
-                $call set_wall, LEFT, pc_maze[j*n_x]
-                $call set_wall, RIGHT, pc_maze[n_x-1+j*n_x]
+                $call set_wall, LEFT, j*n_x
+                $call set_wall, RIGHT, j*n_x+n_x-1
+
+            subcode: set_wall(DIR, v)
+                pc_maze[$(v)] |= $(wall_$(DIR))
 
         subcode: maze_init_door
             $private n_start_wall, n_finish_wall
@@ -99,98 +110,77 @@ page: maze, gui_frame
                         # $print n_$2 = $n_$2 -> $n_$(start)_$2
                 NOOP
 
-    # ---- Recursive Backtracker -------------
-    fncode: maze_create_backtracker
-        pc_doors = new byte[n_x*n_y]
-        pc_ways = new byte[3]
-        $call init_path
-        tn_dir=0
-        $while true
-            k = x+y*n_x
-            $call backtracker_find_ways
-            $if n_ways==0 && i_path==0
-                break
-            $elif n_ways==0
-                # -- backtrack --
-                $call pop_path
-            $else
-                # -- forward --
-                $call push_path
 
-                tn_dir=pc_ways[ $(irand:n_ways)]
-                $call proceed_and_mark_door, tn_dir
+#---- Recursive Backtracker -------------
+subcode: maze_create_backtracker
+    pc_doors = new byte[n_x*n_y]
+    pc_ways = new byte[3]
+    $call init_path
+    tn_dir=0
+    $while true
+        k = x+y*n_x
+        $call backtracker_find_ways
+        $if n_ways==0 && i_path==0
+            break
+        $elif n_ways==0
+            # -- backtrack --
+            $call pop_path
+        $else
+            # -- forward --
+            $call push_path
 
-        # ---------------------
-        subcode: proceed_and_mark_door(dir)
-            pc_doors[k] |= ($(OUT)<<$(dir))
-            $(for:0,1,2,3 and y--, x++, y++, x--)
-                $case $(dir)==$1
-                    $2
-            k = x+y*n_x
-            $(set:dir2=($(dir)+2) % 4)
-            pc_doors[k] |= ($(IN) <<$(dir2))
+            tn_dir=pc_ways[ $(irand:n_ways)]
+            $call proceed_and_mark_door, tn_dir
 
-        # ---------------------
-        subcode: backtracker_find_ways
-            n_ways=0
-            $(for:i,j,next in 0,1,2,3 and 2,3,0,1 and k-n_x, k+1, k+n_x, k-1)
-                $(set:not_door_in=(pc_doors[k] & ($(IN)<<$(i)))==0)
-                $(set:not_door_out=(pc_doors[k] & ($(OUT)<<$(i)))==0)
-                $(set:not_wall=(pc_maze[k] & (0x01<<$(i)))==0)
-                $if $(not_door_in) && $(not_door_out) && $(not_wall)
-                    $(set:next_has_visited=(pc_doors[$(next)] & 0xf)!=0)
-                    $if $(next_has_visited)
-                        pc_maze[k] |= (0x01 << $(i))
-                        pc_maze[$(next)] |= (0x01 << $(j))
-                    $else
-                        pc_ways[n_ways++]=$(i)
-        # ---------------------
-        macros:
-            px: p_path[i_path*2]
-            py: p_path[i_path*2+1]
-            IN: 0x01
-            OUT: 0x10
+    # ---------------------
+    subcode: proceed_and_mark_door(dir)
+        pc_doors[k] |= ($(OUT)<<$(dir))
+        $(for:0,1,2,3 and y--, x++, y++, x--)
+            $case $(dir)==$1
+                $2
+        k = x+y*n_x
+        $(set:dir2=($(dir)+2) % 4)
+        pc_doors[k] |= ($(IN) <<$(dir2))
 
-        subcode: init_path
-            $local int x, int y
-            pn_path = new int[n_x*n_y*2]
-            i_path=0
-            x=n_start_x
-            y=n_start_y
+    # ---------------------
+    subcode: backtracker_find_ways
+        n_ways=0
+        $(for:i,j,next in 0,1,2,3 and 2,3,0,1 and k-n_x, k+1, k+n_x, k-1)
+            $(set:not_door_in=(pc_doors[k] & ($(IN)<<$(i)))==0)
+            $(set:not_door_out=(pc_doors[k] & ($(OUT)<<$(i)))==0)
+            $(set:not_wall=(pc_maze[k] & (0x01<<$(i)))==0)
+            $if $(not_door_in) && $(not_door_out) && $(not_wall)
+                $(set:next_has_visited=(pc_doors[$(next)] & 0xf)!=0)
+                $if $(next_has_visited)
+                    pc_maze[k] |= (0x01 << $(i))
+                    pc_maze[$(next)] |= (0x01 << $(j))
+                $else
+                    pc_ways[n_ways++]=$(i)
+    # ---------------------
+    macros:
+        px: p_path[i_path*2]
+        py: p_path[i_path*2+1]
+        IN: 0x01
+        OUT: 0x10
 
-        subcode: push_path
-            $(px) =x
-            $(py) =y
-            i_path++
+    subcode: init_path
+        $local int x, int y
+        pn_path = new int[n_x*n_y*2]
+        i_path=0
+        x=n_start_x
+        y=n_start_y
 
-        subcode: pop_path
-            i_path--
-            x=$(px)
-            y=$(py)
+    subcode: push_path
+        $(px) =x
+        $(py) =y
+        i_path++
 
-    #---- Draw the maze ------------------
-    fncode: maze_draw
-        # g_img.setColor(Color.BLUE)
-        g_img.fillRect(0, 0, n_w, n_h)
+    subcode: pop_path
+        i_path--
+        x=$(px)
+        y=$(py)
 
-        g_img.setColor(color_wall)
-        g_img.setStroke(new BasicStroke(n_cx1))
-        &call foreach_mazecell
-            $call set_x_y
-            $(mset:x0=x,y0=y,x1=x+n_cx,y1=y+n_cx)
-            $call wall_h, $(wall_TOP), $(y0)
-            $call wall_h, $(wall_BOTTOM), $(y1)
-            $call wall_v, $(wall_LEFT), $(x0)
-            $call wall_v, $(wall_RIGHT), $(x1)
-
-        subcode: wall_h(wall, y)
-            $if (pc_maze[k] & $(wall)) !=0
-                g_img.drawLine($(x0), $(y), $(x1), $(y))
-        subcode: wall_v(wall, x)
-            $if (pc_maze[k] & $(wall)) !=0
-                g_img.drawLine($(x), $(y0), $(x), $(y1))
-
-# ######### Walk the Maze ########
+#---- Maze Walk ------------------------- 
 macros:
     walk_x: p_walk[i_walk*4+0]
     walk_y: p_walk[i_walk*4+1]
@@ -198,296 +188,169 @@ macros:
     walk_dir: p_walk[i_walk*4+3]
 
 subcode: maze_walk_init
-    $private int[] p_walk, i_walk, b_finished
+    $private int[] p_walk, i_walk, n_end_count
     p_walk = new int[n_x*n_y*4] # x, y, n_ways, n_dir
+    k = n_finish_x + n_finish_y * n_x
+    pc_maze[k] |= $(FINISH)
 
-    $call set_maze, FINISH, finish_x, finish_y
-
-    b_finished =false
-    i_walk=0
+    $private n_cur_x, n_cur_y
     n_cur_x=n_start_x
     n_cur_y=n_start_y
-    $call maze_walk_visit, 0
+    tn_dir = (n_start_wall + 2 ) % 4
+    i_walk=0
+    $call maze_walk_visit
 
-subcode: maze_walk
-    $if $(walk_dir)
-	# revisit
-	tn_ways=$(walk_ways)
-    $else
-	# first visit
-        $call find_tn_ways
-	$if tn_ways==0
-	    $call maze_walk_find_dead_region
-
-    $if tn_ways==0
-        # 
-	$call maze_walk_backtrack
-    $else
-	$local pc_dir[4]
-	$call maze_walk_sort_dir
-	$for i=0:4
-	    tn_dir=pc_dir[i]
-	    $if tn_dir & tn_ways
-		$call maze_walk_forward
-		break
-
-    subcode: find_tn_ways
-	tn_ways=0
-	$for i=0:4
-	    tn_dir=0x1<<i
-	    $call maze_walk_check, tn_dir
-
-        subcode: maze_walk_check(dir)
-            $call get_dx_dy, $(dir)
-            $(set:no_wall=!(pc_maze[n_cur_x+n_cur_y*n_x] & $(dir)))
-            $(set:new_cell=!(pc_maze[n_cur_x+tn_dx+(n_cur_y+tn_dy)*n_x] & VISITED))
-            $if $(no_wall)
-                $if $(new_cell)
-                    $if !check_dead_end(n_cur_x+tn_dx, n_cur_y+tn_dy, $(dir), u2_color_deadend)
-                        tn_ways |= $(dir)
-
-    subcode: maze_walk_sort_dir
-        tn_dx=n_finish_x-n_cur_x
-        tn_dy=n_finish_y-n_cur_y
-        $if tn_dy<0
-            pc_dir[0]=DIR_TOP
-            pc_dir[3]=DIR_BOTTOM
-        $else
-            pc_dir[0]=DIR_BOTTOM
-            pc_dir[3]=DIR_TOP
-        $if tn_dx>0
-            pc_dir[1]=DIR_RIGHT
-            pc_dir[2]=DIR_LEFT
-        $else
-            pc_dir[1]=DIR_LEFT
-            pc_dir[2]=DIR_RIGHT
-        $if abs(tn_dx)>abs(tn_dy)
-            $call swap, pc_dir[0], pc_dir[1], tn_dir
-            $call swap, pc_dir[2], pc_dir[3], tn_dir
-
-subcode: maze_walk_random_dir
-    tn_dir=0x1<<irand(4)
-    $for i=0:4
-	pc_dir[i]=tn_dir
-	tn_dir<<=1
-	$if tn_dir>0x8
-	    tn_dir=0x1
-
-subcode: maze_walk_visit(i)
-    #$dump(maze_walk_visit) $(i), n_cur_x, n_cur_y, tn_dir, tn_ways
+subcode: maze_walk_visit
     $(walk_x) = n_cur_x
     $(walk_y) = n_cur_y
-    $(walk_dir) = 0
-    pc_maze[n_cur_x+n_cur_y*n_x] |= VISITED
-    $(if:i!=0)
-	maze_mark_cell(n_cur_x, n_cur_y, u2_color_visit, tn_dir)
-	$if pc_maze[n_cur_x+n_cur_y*n_x] & FINISH
-	    b_finished =true
-
-subcode: maze_walk_forward
-    tn_ways &= ~tn_dir
     $(walk_dir) = tn_dir
-    $(walk_ways) = tn_ways
-    $call get_dx_dy, tn_dir
-    n_cur_x+=tn_dx
-    n_cur_y+=tn_dy
-    n_path_i++
-    $call maze_walk_visit, n_path_i
+    k = n_cur_x + n_cur_y*n_x
+    maze_mark_cell(n_cur_x, n_cur_y, color_visit, tn_dir)
+    $if (pc_maze[k] & $(FINISH))!=0
+        n_end_count =1
+        tn_dir = (n_finish_wall + 2 ) % 4
+        maze_mark_cell(n_cur_x, n_cur_y, color_visit, tn_dir)
+    $elif $(not_visited:k)
+        $call find_tn_ways
+        $(walk_ways) = tn_ways
+    pc_maze[k] |= $(VISITED)
 
-subcode: maze_walk_backtrack
-    $if n_path_i==0
-	b_finished =true
+    subcode: find_tn_ways
+        k = n_cur_x+n_cur_y*n_x
+	tn_ways=0
+	$for 0:4
+            $call get_dx_dy_dk, $(i)
+	    tc_dir=(byte)(0x1<<$(i))
+            $(set:no_wall=(pc_maze[k]&tc_dir)==0)
+            $if $(no_wall)
+                $if $(not_visited:k+tn_dk)
+                    tn_ways |= tc_dir
+# ------------------
+subcode: maze_walk
+    k = n_cur_x + n_cur_y*n_x
+    tn_ways=$(walk_ways)
+    $if tn_ways==0
+        $call maze_walk_backtrack
     $else
-	n_path_i--
-	maze_mark_cell(n_cur_x, n_cur_y, u2_color_backtrack, $(walk_dir))
-	n_cur_x=$(walk_x)
-	n_cur_y=$(walk_y)
+        $call maze_walk_forward
 
-fncode: check_dead_end(tn_x, tn_y, tn_dir)
-    $(set:cell=pc_maze[tn_x+tn_y*n_x])
-    $if ($(cell) & FINISH)
-	return 0
-    $if tn_dir <= 0x2
-	tn_dir_from=tn_dir<<2
-    $else
-	tn_dir_from=tn_dir>>2
-    tn_x2=tn_x
-    tn_y2=tn_y
-    tn_cnt=0
-    $(for:TOP,RIGHT,BOTTOM,LEFT and y2--, x2++, y2++, x2--)
-        $if tn_dir_from != DIR_$1
-            $if !($(cell) & WALL_$1)
-                tn_dir2=DIR_$1
-                tn_$2
-                tn_cnt++
+    subcode: maze_walk_forward
+        tn_rand = $(irand:4)
+	$for i=0:4
+	    tn_dir= (i+tn_rand) % 4
+            tc_dir = (byte)(0x1 << tn_dir)
+	    $if (tc_dir & tn_ways)!=0
+		$call _forward
+		break
 
-    tn_ret=0
-    $if tn_cnt==0
-	tn_ret=1
-    $elif tn_cnt==1
-	tn_ret= check_dead_end(tn_x2, tn_y2, tn_dir2)
+        subcode: _forward
+            tn_ways &= ~tc_dir
+            $(walk_ways) = tn_ways
+            $call get_dx_dy_dk, tn_dir
+            n_cur_x+=tn_dx
+            n_cur_y+=tn_dy
+            i_walk++
+            $call maze_walk_visit
 
-    $if tn_ret
-	$(cell) |= VISITED
-	maze_mark_cell(tn_x, tn_y, u2_color, tn_dir)
-	#$call fb_flush
-	return 1
-    $else
-	return 0
-    
+    subcode: maze_walk_backtrack
+        $if i_walk==0
+            n_end_count =1
+        $else
+            maze_mark_cell(n_cur_x, n_cur_y, color_backtrack, $(walk_dir))
+            i_walk--
+            n_cur_x=$(walk_x)
+            n_cur_y=$(walk_y)
 
-subcode: maze_walk_find_dead_region
-    $call maze_walk_find_open_region
-    &call foreach_mazecell
-	$if pc_maze[k] & OPEN
-	    pc_maze[k] &= ~OPEN
-	$elif !(pc_maze[k] & VISITED)
-	    #$dump(dead) i, j
-	    pc_maze[k] |= VISITED
-	    maze_fill_cell(i, j, u2_color_dead)
-	    #$call fb_flush
+#---- Draw ----------------------------------- 
+subcode: paint_maze
+    $if pc_maze != null
+        $(set:b=n_cx1*2)
+        tn_ox = (n_canvas_w-n_w)/2-$(b)
+        tn_oy = (n_canvas_h-n_h)/2-$(b)
+        $call draw_maze_walls, $(b)
+        g.drawImage(b_img, tn_ox+$(b), tn_oy+$(b), this)
 
-subcode: maze_walk_find_open_region
-    $local pn_queue, tn_last
-    $local_allocate(n_x*n_y*2) pn_queue
-    pn_queue[0]=n_finish_x
-    pn_queue[1]=n_finish_y
-    pc_maze[n_finish_x+n_finish_y*n_x] |= OPEN
-    tn_last=2
-    $while tn_last>0
-	tn_last-=2
-	tn_x=pn_queue[tn_last]
-	tn_y=pn_queue[tn_last+1]
-	$call maze_walk_add_open, tn_x-1, tn_y, tn_x>0
-	$call maze_walk_add_open, tn_x+1, tn_y, tn_x+1<n_x
-	$call maze_walk_add_open, tn_x, tn_y-1, tn_y>0
-	$call maze_walk_add_open, tn_x, tn_y+1, tn_y+1<n_y
+    subcode: draw_maze_walls(b)
+        $(set:x0=tn_ox+$(b))
+        $(set:y0=tn_oy+$(b))
+        $(set:x1=$(x0)+n_w)
+        $(set:y1=$(y0)+n_h)
+        Graphics2D g2 = (Graphics2D) g;
+        g2.setStroke(new BasicStroke($(b)*2))
 
-subcode: maze_walk_add_open(x, y, cond)
+        g2.setColor(color_wall)
+        g2.drawRect($(x0), $(y0), n_w, n_h)
 
-    $if $(cond) && !( pc_maze[$(x)+($(y))*n_x] & (VISITED|OPEN))
-	pn_queue[tn_last]=$(x)
-	pn_queue[tn_last+1]=$(y)
-	pc_maze[$(x)+($(y))*n_x] |= OPEN
-	tn_last+=2
+        g2.setColor(color_door)
+        $(for:start in start,finish)
+            $(set:x=$(x0)+n_$(start)_x*n_cx)
+            $(set:y=$(y0)+n_$(start)_y*n_cx)
+            $call _h, $(dir_TOP), $(x), $(y0)
+            $call _h, $(dir_BOTTOM), $(x), $(y1)
+            $call _v, $(dir_LEFT), $(x0), $(y)
+            $call _v, $(dir_RIGHT), $(x1), $(y)
+            NOOP
 
-#----------------------------------------------- 
-fncode: maze_mark_cell(tn_x, tn_y, Color c, tn_dir)
-    $(mset:x=tn_x,y=tn_y,color=c,dir=tn_dir)
-    $if $(dir)==DIR_TOP
-	$call fillrect, n_offset+n_cx*$(x)+n_cx12, n_offset+n_cx*$(y)+n_cx12, n_cx3, n_cx, $(color)
-    $elif $(dir)==DIR_RIGHT
-	$call fillrect, n_offset+n_cx*$(x)-n_cx12, n_offset+n_cx*$(y)+n_cx12, n_cx, n_cx3, $(color)
-    $elif $(dir)==DIR_BOTTOM
-	$call fillrect, n_offset+n_cx*$(x)+n_cx12, n_offset+n_cx*$(y)-n_cx12, n_cx3, n_cx, $(color)
-    $elif $(dir)==DIR_LEFT
-	$call fillrect, n_offset+n_cx*$(x)+n_cx12, n_offset+n_cx*$(y)+n_cx12, n_cx, n_cx3, $(color)
-    $else
-	$call fillrect, n_offset+n_cx*$(x)+n_cx12, n_offset+n_cx*$(y)+n_cx12, n_cx3, n_cx3, $(color)
+        subcode: _h(dir,x,y)
+            $case n_$(start)_wall == $(dir)
+                g2.drawLine($(x)+n_cx12, $(y), $(x)+n_cx-n_cx12, $(y))
+        subcode: _v(dir,x,y)
+            $case n_$(start)_wall == $(dir)
+                g2.drawLine($(x), $(y)+n_cx12, $(x), $(y)+n_cx-n_cx12)
 
-fncode: maze_fill_cell(tn_x, tn_y, tu2_color)
-    $(mset:l1=n_cx12+n_cx1,l2=n_cx-n_cx1-n_cx1)
-    $(set:wall=pc_maze[tn_x+tn_y*n_x])
-    $(set:offx=n_offset+n_cx*tn_x)
-    $(set:offy=n_offset+n_cx*tn_y)
-    $(set:color=tu2_color)
+# -------------------------------------- 
+subcode: init_image
+    $import java.awt.image.BufferedImage
+    $private BufferedImage b_img, Graphics2D g_img
+    b_img = new BufferedImage(n_w, n_h, BufferedImage.TYPE_4BYTE_ABGR)
+    g_img = b_img.createGraphics()
 
-    $call fillrect, $(offx)+n_cx1, $(offy)+n_cx1, $(l2), $(l2), $(color)
-
-    $if !($(wall) & WALL_TOP)
-	$call fillrect, $(offx)+n_cx1, $(offy)-n_cx12, $(l2), $(l1), $(color)
-    $if !($(wall) & WALL_RIGHT)
-	$call fillrect, $(offx)+n_cx-n_cx1, $(offy)+n_cx1, $(l1), $(l2), $(color)
-    $if !($(wall) & WALL_BOTTOM)
-	$call fillrect, $(offx)+n_cx1, $(offy)+n_cx-n_cx1, $(l2), $(l1), $(color)
-    $if !($(wall) & WALL_LEFT)
-	$call fillrect, $(offx)-n_cx12, $(offy)+n_cx1, $(l1), $(l2), $(color)
-
-subcode: get_dx_dy(dir)
-    $if $(dir)==DIR_TOP
-	tn_dx=0
-	tn_dy=-1
-    $elif $(dir)==DIR_RIGHT
-	tn_dx=1
-	tn_dy=0
-    $elif $(dir)==DIR_BOTTOM
-	tn_dx=0
-	tn_dy=1
-    $elif $(dir)==DIR_LEFT
-	tn_dx=-1
-	tn_dy=0
-
-subcode: foreach_mazecell
-    k=0
-    $for j=0:n_y
-	$for i=0:n_x
-	    BLOCK
-	    k++
-
-    subcode: set_x_y
-        $local int x, int y
-        x = i * n_cx
-        y = j * n_cx
 # -------------------
-subcode: swap(a, b, temp)
-    $(temp)=$(a)
-    $(a)=$(b)
-    $(b)=$(temp)
+subcode: img_maze_draw
+    # g_img.setColor(Color.BLUE)
+    g_img.fillRect(0, 0, n_w, n_h)
 
-#---- utils ------------------------------------------- 
-macros:
-    dir_TOP: 0
-    dir_RIGHT: 1
-    dir_BOTTOM: 2
-    dir_LEFT: 3
-    wall_TOP: 0x01
-    wall_RIGHT: 0x02
-    wall_BOTTOM: 0x04
-    wall_LEFT: 0x08
-    FINISH: 0x10
-    VISITED: 0x20
-    OPEN: 0x40
+    g_img.setColor(color_wall)
+    g_img.setStroke(new BasicStroke(n_cx1))
+    &call foreach_mazecell
+        $call set_x_y
+        $(mset:x0=x,y0=y,x1=x+n_cx,y1=y+n_cx)
+        $call wall_h, $(wall_TOP), $(y0)
+        $call wall_h, $(wall_BOTTOM), $(y1)
+        $call wall_v, $(wall_LEFT), $(x0)
+        $call wall_v, $(wall_RIGHT), $(x1)
 
-subcode: set_wall(DIR, v)
-    $(v) |= $(wall_$(DIR))
+    subcode: wall_h(wall, y)
+        $if (pc_maze[k] & $(wall)) !=0
+            g_img.drawLine($(x0), $(y), $(x1), $(y))
+    subcode: wall_v(wall, x)
+        $if (pc_maze[k] & $(wall)) !=0
+            g_img.drawLine($(x), $(y0), $(x), $(y1))
+# -------------------
+subcode: img_mark_cell
+    g_img.setColor(color)
+    $local int x0, int y0, int x1, int y1
+    x0 = x*n_cx+n_cx12
+    y0 = y*n_cx+n_cx12
+    $(set:t=n_cx12*2)
+    $(set:a=n_cx3)
+    $(set:b=n_cx)
 
-subcode: set_maze(DIR, x, y)
-    pc_maze[$(x)+$(y)*n_x] |= $($(DIR))
+    $call cell, TOP, x0, y0, $(a),$(b)
+    $call cell, BOTTOM, x0, y0-$(t), $(a), $(b)
+    $call cell, LEFT, x0,y0,$(b),$(a)
+    $call cell, RIGHT, x0-$(t), y0,$(b),$(a)
 
-#----------------------------------------------- 
-subcode: fillrect(x, y, dx, dy, color)
-    g_img.setPaint($(color))
-    g_img.fillRect($(x), $(y), $(dx), $(dy))
-
-subcode: draw_maze_walls(b)
-    $(mset:x0=$(b),y0=$(b))
-    $(set:x1=$(x0)+n_w)
-    $(set:y1=$(y0)+n_h)
-    Graphics2D g2 = (Graphics2D) g;
-    g2.setStroke(new BasicStroke($(b)*2))
-
-    g2.setPaint(color_wall)
-    g2.drawRect($(x0), $(y0), n_w, n_h)
-
-    g2.setPaint(color_door)
-    $(for:start in start,finish)
-        $(set:x=$(x0)+n_$(start)_x*n_cx)
-        $(set:y=$(y0)+n_$(start)_y*n_cx)
-        $if n_$(start)_wall==$(dir_TOP)
-            g2.drawLine($(x), $(y0), $(x)+n_cx3, $(y0))
-        $elif n_$(start)_wall==$(dir_BOTTOM)
-            g2.drawLine($(x), $(y1), $(x)+n_cx3, $(y1))
-        $elif n_$(start)_wall==$(dir_LEFT)
-            g2.drawLine($(x0), $(y), $(x0), $(y)+n_cx3)
-        $elif n_$(start)_wall==$(dir_RIGHT)
-            g2.drawLine($(x1), $(y), $(x1), $(y)+n_cx3)
+    subcode: cell(dir, x, y, w, h)
+        $case tn_dir==$(dir_$(dir))
+            g_img.fillRect($(x),$(y),$(w),$(h))
 
 #----------------------------------------------- 
 macros:
     irand: rand.nextInt($1)
 
 subcode: init(w, h)
-    $private n_w=$(w), n_h=$(h)
+    $private n_canvas_w=$(w)-10, n_canvas_h=$(h)-40
     $call init_random
     $call init_color
     # $private pc_maze=null
@@ -508,4 +371,48 @@ subcode: init(w, h)
         subcode: color(name, r, g, b)
             $private Color color_$(name)
             color_$(name)=new Color($(r)f, $(g)f, $(b)f)
+
+#---- utils ------------------------------- 
+subcode: _autoload
+    $register_name(color) Color
+
+macros:
+    dir_TOP: 0
+    dir_RIGHT: 1
+    dir_BOTTOM: 2
+    dir_LEFT: 3
+    wall_TOP: 0x01
+    wall_RIGHT: 0x02
+    wall_BOTTOM: 0x04
+    wall_LEFT: 0x08
+    FINISH: 0x10
+    VISITED: 0x20
+    OPEN: 0x40
+    not_visited: (pc_maze[$1]&$(VISITED))==0
+
+#----------------------------------------------- 
+subcode: get_dx_dy_dk(dir)
+    tn_dx = 0
+    tn_dy = 0
+    $call _d, $(dir_TOP), 0, -1
+    $call _d, $(dir_BOTTOM), 0, +1
+    $call _d, $(dir_RIGHT), 1, 0
+    $call _d, $(dir_LEFT), -1, 0
+    tn_dk = tn_dx + tn_dy*n_x
+    subcode: _d(D, dx, dy)
+        $case $(dir)==$(D)
+            tn_dx = $(dx)
+            tn_dy = $(dy)
+
+subcode: foreach_mazecell
+    k=0
+    $for j=0:n_y
+	$for i=0:n_x
+	    BLOCK
+	    k++
+
+    subcode: set_x_y
+        $local int x, int y
+        x = i * n_cx
+        y = j * n_cx
 

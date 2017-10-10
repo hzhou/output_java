@@ -56,7 +56,8 @@ fncode: _gui_init
         $private Canvas $(var)
         $(var) = new Canvas(){
             public void paint(Graphics g){
-                BLOCK
+                $in_function
+                    BLOCK
             }
         };
         $(var).setSize($(w), $(h))
@@ -98,7 +99,8 @@ fncode: _gui_init
     subcode: add_listener(var)
         $(var).addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent evt){
-                BLOCK
+                $in_function
+                    BLOCK
             }
         });
         
@@ -113,7 +115,8 @@ subcode: animate(millisec, delay)
 
     timer=new Timer($(millisec), new ActionListener(){
         public void actionPerformed(ActionEvent evt){
-            BLOCK
+            $in_function
+                BLOCK
         }
     });
     timer.setInitialDelay($(delay))
