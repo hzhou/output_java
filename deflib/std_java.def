@@ -48,6 +48,16 @@ subcode: scanner(@file)
     subcode: get_double(v)
         $(v) = scanner.nextDouble()
 
+#---- timing ------------------------------------ 
+subcode: start_time
+    $local long time_start
+    time_start = System.nanoTime()
+
+subcode: print_time(msg)
+    $local long time_diff
+    time_diff = System.nanoTime()-time_start
+    $print "$(msg): %f sec", time_diff / 1.0e9
+
 #----------------------------------------
 macros:
     atoi: Integer.parseInt($1)
