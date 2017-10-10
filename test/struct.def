@@ -1,0 +1,13 @@
+page: t, basic_frame
+    module: java
+
+    $struct(P) int x, int y
+
+    n=10
+    pc_list = new byte[n+1]
+    p_t = new P[n]
+    $for i=0:n
+        pc_list[i] = (byte)i
+        p_t[i] = new P()
+        p_t[i].x=i
+        $print $i
