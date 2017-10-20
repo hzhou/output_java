@@ -8,7 +8,7 @@ page: test, gui_frame
     $private n_w=800, n_h=600
 
     $call init_random
-    $call init_balls
+    $call init_balls, 100
     &call each_ball
         $(o) = ball_create(n_w/2, n_h/2)
 
@@ -16,20 +16,19 @@ page: test, gui_frame
         &call each_ball
             ball_draw($(o), g)
 
-    canvas.setBackground(Color.GRAY)
-
     &call animate, 20, 500
         &call each_ball
             ball_update($(o))
 
         canvas.repaint()
 
+    canvas.setBackground(Color.GRAY)
     #-------------------------------------------- 
     $struct(ball) f_x, f_y, f_r, f_dx, f_dy, Color c, f_alpha
 
-    subcode: init_balls
+    subcode: init_balls(N)
         $private ball[] balls
-        balls = new ball[100]
+        balls = new ball[$(N)]
 
     subcode: each_ball
         $for i=0:balls.length
