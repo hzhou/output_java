@@ -58,6 +58,14 @@ subcode: print_time(msg)
     time_diff = System.nanoTime()-time_start
     $print "$(msg): %f sec", time_diff / 1.0e9
 
+#---- random ---------------------------------- 
+subcode: init_random
+    $private Random rand
+    rand = new Random
+
+macros:
+    irand: rand.nextInt($1)
+    rand: rand.nextFloat()
 #----------------------------------------
 macros:
     atoi: Integer.parseInt($1)

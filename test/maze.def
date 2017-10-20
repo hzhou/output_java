@@ -346,18 +346,11 @@ subcode: img_mark_cell
             g_img.fillRect($(x),$(y),$(w),$(h))
 
 #----------------------------------------------- 
-macros:
-    irand: rand.nextInt($1)
-
 subcode: init(w, h)
     $private n_canvas_w=$(w)-10, n_canvas_h=$(h)-40
     $call init_random
     $call init_color
     # $private pc_maze=null
-
-    subcode: init_random
-        $private Random rand
-        rand = new Random
 
     subcode: init_color
         $call color, wall, 0.9, 0.8, 0.9
