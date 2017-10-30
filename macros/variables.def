@@ -19,42 +19,40 @@ subcode:: java_parse
             return
         my @plist = MyDef::utils::proper_split($param)
         $foreach $p in @plist
-            my $val
+            # $(super:f_add_var)($h, $l, $p)
+            my ($val, $type)
             $if $p=~/(.*?)\s*=\s*(.*)/
                 $p=$1
                 $val = $2
-            my $name=$(super:f_add_var)($h, $l, $p)
+                $call guess_type_from_new
+            my $name=$(super:f_add_var)($h, $l, $p, $type)
             $if $val
                 push @$out, "$p = $val;"
         return
 
-#----------------------------------------------- 
-subcode:: java_parse
-    $elif $l=~/^(\w+)\s*=\s*new\s*(\w+)\s*(.*)\s*;?/
-        my ($v, $cls, $p)=($1, $2, $3)
-        my $type = $cls
-        $if $p=~/<(.*?)>(.*)/
+subcode: guess_type_from_new
+    # assume $val, $type
+    $if $val=~/^\s*new\s+(\w+)(.*)/
+        my ($cls, $p)=($1, $2)
+        $if $p=~/^<(.*?)>(.*)/
             $type = "$cls<$1>"
-            $cls = "$cls<>"
-            $p = $2
         $elif $p=~/\[(.*?)\](.*)/
             $type = "$cls"."[]"
-        $(super:auto_add_var)($v, $type)
-
-        $if !$p
-            push @$out, "$v = new $cls();"
-        $elif $p=~/\{\s*$/
-            push @$out, "$v = new $cls$p"
-        $elif $p=~/^\((.*)\)/
-            push @$out, "$v = new $cls$p;"
-        $elif $p=~/^\[(.*)\]/
-            push @$out, "$v = new $cls$p;"
         $else
-            push @$out, "$v = new $cls($p);"
+            $type = $cls
 
         $if $common_classes{$cls}
             add_import($common_classes{$cls})
 
+
+#----------------------------------------------- 
+subcode:: java_parse
+    $elif $l=~/^(\w+)\s*=\s*(new\s+.*)/
+        my ($name, $val) = ($1, $2)
+        my $type
+        $call guess_type_from_new
+        $(super:auto_add_var)($name, $type)
+        push @$out, "$name = $val;"
         return
 
 subcode: _autoload
