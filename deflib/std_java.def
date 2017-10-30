@@ -10,7 +10,7 @@ fncode: _basic_main(main)
 #---- BufferedReader ----
 subcode: input(@file)
     $import java.io.*
-    try{
+    &call try
         $(if:file=)
             # InputStreamReader wraps byte stream into char stream
             $(set:in=new InputStreamReader(System.in))
@@ -19,9 +19,6 @@ subcode: input(@file)
         $local BufferedReader In = new BufferedReader($(in))
         BLOCK
         In.close();
-    }
-    catch(Exception e){
-    }
 
     subcode: get_s(v)
         $(v) = In.readLine()
@@ -49,6 +46,14 @@ subcode: scanner(@file)
     subcode: get_double(v)
         $(v) = scanner.nextDouble()
 
+#---- Output ----
+subcode: open_w(file)
+    $import java.io.*
+    &call try
+        PrintWriter Out = new PrintWriter($(file))
+        BLOCK
+        Out.close()
+
 #---- timing ------------------------------------ 
 subcode: start_time
     $local long time_start
@@ -74,4 +79,10 @@ macros:
 
     itoa: Integer.toString($1)
 
-
+#---------------------------------------- 
+subcode: try
+    try {
+        BLOCK
+    }
+    catch(Exception e){
+    }

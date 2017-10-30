@@ -39,4 +39,4 @@ fncode: parse_print($param)
             push @$out, "$print_to = String.format($fmt);"
         $else
             # err
-            push @$out, "System.$print_to.printf($fmt);"
+            push @$out, "$print_to.printf($fmt);"
