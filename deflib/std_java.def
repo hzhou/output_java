@@ -18,6 +18,7 @@ subcode: input(@file)
             $(set:in=new FileReader($(file)))
         $local BufferedReader In = new BufferedReader($(in))
         BLOCK
+        In.close();
     }
     catch(Exception e){
     }
