@@ -55,13 +55,23 @@ fncode: _gui_init
     subcode: add_canvas(var, w, h)
         $private Canvas $(var)
         $(var) = new Canvas(){
-            public void paint(Graphics g){
+            public void paint(Graphics g0){
+                Graphics2D g = (Graphics2D)g0;
+                $(if:1)
+                    $call set_hints
                 $in_function
                     BLOCK
             }
         };
         $(var).setSize($(w), $(h))
         frame.add($(var))
+
+        subcode: set_hints
+            $(set:R=RenderingHints)
+            # $(mset:k=TEXT_ANTIALIASING,v=TEXT_ANTIALIAS_ON)
+            $(mset:k=ANTIALIASING,v=ANTIALIAS_ON)
+            $(R) rh = new $(R)( $(R).KEY_$(k), $(R).VALUE_$(v));
+            g.setRenderingHints(rh);
 
     # -----------------------------
     subcode: add_button(var, label)
