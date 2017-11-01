@@ -1,0 +1,51 @@
+subcode: javafx_frame
+    $import javafx.application.Application
+    $import javafx.scene.Group
+    $import javafx.scene.Stage
+    $import javafx.scene.Scene
+
+    $extends Application
+
+    $function main
+        launch(args)
+
+    $function start(Stage stage)
+        $in_function
+            $call main2
+        $(if:title)
+            stage.setTitle("$(title)")
+        stage.show()
+
+subcode: set_scene(w, h)
+    Scene scene=new Scene($(w), $(h))
+    BLOCK
+    stage.setScene(scene)
+
+    subcode: add_group
+        $(setmacro:_g=)
+        BLOCK
+        $(setmacro:_g_idx+=1)
+        Group g$(_g_idx) = new Group($(_g))
+
+    subcode: add_obj
+        $(setmacro:_o_idx+=1)
+        $(set:obj=obj$(_o_idx))
+        $(setmacro:_g[, ]=$(obj))
+        BLOCK
+
+    subcode: add_sphere(x,y,r)
+        &call add_obj
+            $import javafx.scene.shape.Sphere
+            Sphere $(obj) = new Sphere()
+            $(obj).setTranslateX($(x))
+            $(obj).setTranslateY($(y))
+            $(obj).setRadius($(r))
+
+
+#---------------------------------------- 
+page: test, javafx_frame
+    &call set_scene, 600, 300
+        &call add_group
+            $call add_sphere, 100, 150, 50
+            $call add_sphere, 300, 150, 50
+            $call add_sphere, 500, 150, 50
