@@ -90,6 +90,9 @@ page: output_java, inherit, c
 
             $(super:process_function_std)($func)
 
+        # TODO: flag struct member functions
+        #       filter @$out 
+        #       dump here
         subcode: dump_structs
             $foreach $name in @$(super:struct_list)
                 my $st = $$(super:structs){$name}

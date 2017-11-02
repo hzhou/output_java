@@ -37,7 +37,7 @@ page: test, gui_frame
 
     fncode: ball_create(int x, int y)
         $return_type ball
-        o = new ball
+        o = new ball()
         o.f_x = (float)x
         o.f_y = (float)y
         o.f_r = 5

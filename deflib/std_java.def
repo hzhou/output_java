@@ -66,8 +66,7 @@ subcode: print_time(msg)
 
 #---- random ---------------------------------- 
 subcode: init_random
-    $private Random rand
-    rand = new Random
+    $private rand = new Random()
 
 macros:
     irand: rand.nextInt($1)
