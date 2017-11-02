@@ -23,24 +23,38 @@ subcode: set_scene(w, h)
     Scene scene=new Scene(group, $(w), $(h));
     stage.setScene(scene)
 
-    subcode: add_obj
+    # Group . getChildren().add(obj)
+
+    # ---- Shape3D -----------------
+    subcode: add_3d(type)
         $(setmacro:_o_idx+=1)
         $(set:obj=obj$(_o_idx))
         $(setmacro:_g[, ]=$(obj))
+
+        $import javafx.scene.shape.$(type)
+        $(type) $(obj) = new $(type)();
+        $(for:X,Y,Z and $(x),$(y),$(z))
+            $(obj).setTranslate$1($2)
         BLOCK
 
-    subcode: add_sphere(x,y,r)
-        &call add_obj
-            $import javafx.scene.shape.Sphere
-            Sphere $(obj) = new Sphere();
-            $(obj).setTranslateX($(x))
-            $(obj).setTranslateY($(y))
+    subcode: add_sphere(x,y,z,r)
+        &call add_3d, Sphere
             $(obj).setRadius($(r))
+
+    subcode: add_box(x,y,z,w,h,d)
+        &call add_3d, Box
+            $(for:Width,Height,Depth and $(w),$(h),$(d))
+                $(obj).set$1($2)
+
+    subcode: add_cylinder(x,y,z,r,h)
+        &call add_3d, Cylinder
+            $(for:Radius,Height and $(r),$(h))
+                $(obj).set$1($2)
 
 
 #---------------------------------------- 
 page: test, javafx_frame
     &call set_scene, 600, 300
-        $call add_sphere, 100, 150, 50
-        $call add_sphere, 300, 150, 50
-        $call add_sphere, 500, 150, 50
+        $call add_sphere, 100, 150, 0, 50
+        $call add_sphere, 300, 150, 0, 50
+        $call add_sphere, 500, 150, 0, 50
