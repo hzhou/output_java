@@ -30,6 +30,11 @@ perlcode: set_layout
         push @$out, "frame.setLayout(new FlowLayout($align$2));"
 
 fncode: _gui_init
+    $(if:!size)
+        $(set2:size=800,600)
+    $(if:!title)
+        $(set2:title=NoTitle)
+
     $private $(Frm) frame
     frame = new $(Frm)("$(title)")
     $call default_window_events
@@ -37,10 +42,9 @@ fncode: _gui_init
         $call set_layout, $(align)
     $(else)
         frame.setLayout(new FlowLayout())
-    $Call main2
+    $Call @main2
 
-    $(if:size)
-        frame.setSize($(size))
+    frame.setSize($(size))
     frame.setVisible(true)
     # ----
     subcode: default_window_events
@@ -150,6 +154,7 @@ subcode: animate(millisec, delay)
                 BLOCK
         }
     });
-    timer.setInitialDelay($(delay))
+    $(if:delay>0)
+        timer.setInitialDelay($(delay))
     timer.start()
 
