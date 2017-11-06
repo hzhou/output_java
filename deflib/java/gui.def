@@ -54,6 +54,8 @@ fncode: _gui_init
 
     # -----------------------------
     subcode: add_canvas(var, w, h)
+        $(if:var=-)
+            $(set:var=canvas)
         $(if:swing)
             $call add_canvas_swing
         $(else)
