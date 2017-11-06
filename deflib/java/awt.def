@@ -61,19 +61,19 @@ fncode: _gui_init
 
     subcode: add_canvas_swing
         $private JPanel $(var)
-        $: $(var) = new JPanel(){
+        $(var) = new JPanel(){
             public void paintComponent(Graphics g0){
                 Graphics2D g = (Graphics2D)g0;
                 $in_function
                     BLOCK
             }
         };
-        $(var).setPrefererredSize(new Dimension($(w), $(h)))
+        $(var).setPreferredSize(new Dimension($(w), $(h)))
         frame.add($(var))
 
     subcode: add_canvas_awt
         $private Canvas $(var)
-        $: $(var) = new Canvas(){
+        $(var) = new Canvas(){
             public void paint(Graphics g0){
                 Graphics2D g = (Graphics2D)g0;
                 $(if:1)

@@ -52,7 +52,10 @@ subcode:: java_parse
         my $type
         $call guess_type_from_new
         $(super:auto_add_var)($name, $type)
-        push @$out, "$name = $val;"
+        $if $val=~/{\s*$/
+            push @$out, "$name = $val"
+        $else
+            push @$out, "$name = $val;"
         return
 
 subcode: _autoload
