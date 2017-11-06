@@ -1,4 +1,4 @@
-include: java/awt.def
+include: java/gui.def
 
 page: test, gui_frame
     module: java
