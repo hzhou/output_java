@@ -1,8 +1,4 @@
 macros:
-    Frm: Frame
-    Btn: Button
-    Lbl: Label
-    Txt: TextField
     swing: 1
 
 #----------------------------------------------- 
@@ -56,7 +52,7 @@ fncode: _gui_init
             }
         });
 
-    # -----------------------------
+    # ----Canvas -------------------------
     subcode: add_canvas(var, w, h)
         $(if:var=-)
             $(set:var=canvas)
@@ -77,28 +73,21 @@ fncode: _gui_init
         $(var).setPreferredSize(new Dimension($(w), $(h)))
         frame.add($(var))
 
-    subcode: add_canvas_awt
-        $private Canvas $(var)
-        $(var) = new Canvas(){
-            public void paint(Graphics g0){
-                Graphics2D g = (Graphics2D)g0;
-                $(if:1)
-                    $call set_hints
+    # ---- keys ------------------
+    subcode: add_keypress
+        frame.addKeyListener(new KeyListener(){
+            public void keyPressed(KeyEvent e){
+                int key = e.getKeyCode();
                 $in_function
                     BLOCK
             }
-        };
-        $(var).setSize($(w), $(h))
-        frame.add($(var))
+        });
 
-        subcode: set_hints
-            $(set:R=RenderingHints)
-            # $(mset:k=TEXT_ANTIALIASING,v=TEXT_ANTIALIAS_ON)
-            $(mset:k=ANTIALIASING,v=ANTIALIAS_ON)
-            $(R) rh = new $(R)( $(R).KEY_$(k), $(R).VALUE_$(v));
-            g.setRenderingHints(rh);
+        subcode: on_key(VK_Key)
+            $case key==KeyEvent.$(VK_Key)
+                BLOCK
 
-    # -----------------------------
+    # ---- widgets -------------------------
     subcode: add_button(var, label)
         $(if:var=-)
             frame.add(new $(Btn)($(label)))
@@ -157,4 +146,32 @@ subcode: animate(millisec, delay)
     $(if:delay>0)
         timer.setInitialDelay($(delay))
     timer.start()
+
+#---- awt ------------------------------------ 
+macros:
+    Frm: Frame
+    Btn: Button
+    Lbl: Label
+    Txt: TextField
+
+subcode: add_canvas_awt
+    $private Canvas $(var)
+    $(var) = new Canvas(){
+        public void paint(Graphics g0){
+            Graphics2D g = (Graphics2D)g0;
+            $(if:1)
+                $call set_hints
+            $in_function
+                BLOCK
+        }
+    };
+    $(var).setSize($(w), $(h))
+    frame.add($(var))
+
+    subcode: set_hints
+        $(set:R=RenderingHints)
+        # $(mset:k=TEXT_ANTIALIASING,v=TEXT_ANTIALIAS_ON)
+        $(mset:k=ANTIALIASING,v=ANTIALIAS_ON)
+        $(R) rh = new $(R)( $(R).KEY_$(k), $(R).VALUE_$(v));
+        g.setRenderingHints(rh);
 
