@@ -81,6 +81,8 @@ fncode: _gui_init
                 $in_function
                     BLOCK
             }
+            public void keyReleased(KeyEvent e){}
+            public void keyTyped(KeyEvent e){}
         });
 
         subcode: on_key(VK_Key)

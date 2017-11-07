@@ -1,0 +1,40 @@
+include: java/gui.def
+page: test, gui_frame
+    module: java
+    size: 500, 500
+
+    &call add_canvas, canvas, $(size)
+        $for col=0:16
+            tn_x = (int)(250 + (col-7.5)*25)
+            $for row=0:10
+                tn_y0 = (int)(250 + (row-4.5)*22)
+                tf_c  = (float)row/10
+                $call set_color, tf_c
+                tf_phase = 0.02 * n_time + 3.14 * col / 16
+                $call draw_one
+                tf_phase += 3.14
+                $call draw_one
+    canvas.setBackground(Color.gray)
+
+    $private n_time=0
+    &call animate, 1000/60, -
+        n_time++
+        canvas.repaint()
+
+    subcode: draw_one
+        # tn_x = 200
+        tn_y = tn_y0 + (int)(50 * Math.sin(tf_phase))
+        tn_r = 1+ (int)(12 * (Math.cos(tf_phase) + 1)/2)
+        g.fillOval(tn_x-tn_r, tn_y-tn_r, tn_r*2, tn_r*2)
+
+    subcode: set_color(f)
+        $(set:C1=253, 174, 120)
+        $(set:C2=226, 129, 161)
+        $(for:r,g,b and $(C1) and $(C2))
+            $my float tf_$1
+            tf_$1 = (float)($2*$(f) + $3 * (1-$(f)))/255
+        g.setColor(new Color(tf_r,tf_g, tf_b))
+
+
+
+

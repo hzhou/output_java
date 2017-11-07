@@ -1,0 +1,30 @@
+include: java/gui.def
+page: test, gui_frame
+    module: java
+    size: 500, 500
+
+    $private n_w, n_h, n_dx=10
+    $(for:w,h and $(size))
+        n_$1 = $2/n_dx
+
+    $private int x=0, int y=2
+    $private int dx=1, int dy=0
+
+    &call add_canvas, canvas, $(size)
+        g.fillOval(x*n_dx, y*n_dx, n_dx, n_dx)
+
+    &call animate, 1000, -
+        x += dx
+        y += dy
+        $if x>=n_w || x<0 || y>=n_h || y<0
+            timer.stop()
+        $else
+            canvas.repaint()
+
+    &call add_keypress
+        $(for:UP,DOWN,LEFT,RIGHT and y,y,x,x and -1, 1, -1, 1)
+            &call on_key, VK_$1
+                $if d$2==0
+                    dx=0
+                    dy=0
+                    d$2=$3

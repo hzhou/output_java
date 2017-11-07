@@ -25,8 +25,11 @@ subcode:: java_parse
                 $p=$1
                 $val = $2
                 $call guess_type_from_new
+            $if $p=~/(\w.*)\s+(\w+)$/
+                $type = $1
+                $p = $2
             my $name=$(super:f_add_var)($h, $l, $p, $type)
-            $if $val
+            $if $val or $val eq "0"
                 push @$out, "$p = $val;"
         return
 
