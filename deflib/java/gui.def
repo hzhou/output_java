@@ -65,6 +65,7 @@ fncode: _gui_init
         $private JPanel $(var)
         $(var) = new JPanel(){
             public void paintComponent(Graphics g0){
+                super.paintComponent(g0);
                 Graphics2D g = (Graphics2D)g0;
                 $in_function
                     BLOCK
