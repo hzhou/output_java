@@ -70,8 +70,9 @@ page: output_java, inherit, c
         subcode: process_function_java
             my $name=$func->{name}
             $if $name=~/(\w+)\.(\w+)/
-                $name=$2
+                $func->{name}=$2
                 $func->{class}=$1
+                $name=$2
             $else
                 $func->{class}=$page->{_pagename}
             # ----------------

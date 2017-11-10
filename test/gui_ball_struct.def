@@ -1,0 +1,67 @@
+include: java/gui.def
+
+page: test, gui_frame
+    module: java
+    title: Test Canvas
+    size: 820, 650
+
+    $private n_w=800, n_h=600
+
+    $call init_random
+    $call init_balls, 1000
+
+    &call add_canvas, canvas, n_w, n_h
+        &call each_ball
+            ball_draw($(o), g)
+
+    &call animate, 20, 500
+        &call each_ball
+            ball_update($(o))
+
+        canvas.repaint()
+
+    canvas.setBackground(Color.GRAY)
+    #-------------------------------------------- 
+    $struct(ball) f_x, f_y, f_r, f_dx, f_dy, Color c, f_alpha
+
+    subcode: init_balls(N)
+        $private ball[] balls
+        balls = new ball[$(N)]
+        &call each_ball
+            $(o)=new ball()
+            tf_v = 2.0 + $(rand)*5
+            tf_a = $(rand)*6.28
+            tf_dx = tf_v * Math.cos(tf_a)
+            tf_dy = tf_v * Math.sin(tf_a)
+            ball_init($(o), n_w/2, n_h/2, tf_dx, tf_dy)
+
+    subcode: each_ball
+        $for i=0:balls.length
+            $(set:o=balls[i])
+            BLOCK
+
+    fncode: ball_init(ball o, tf_x, tf_y, tf_dx, tf_dy)
+        $(for:x,y,dx,dy)
+            o.f_$1 = tf_$1;
+        o.f_r = 5;
+        o.c = Color.blue;
+        o.f_alpha = 1.0;
+
+    fncode: ball_update(ball o)
+        $(for:x,y)
+            o.f_$1 += o.f_d$1
+        $(if:1) # bouce off walls
+            $(for:x,y and n_w, n_h)
+                $if o.f_$1+o.f_r>$2 || o.f_$1-o.f_r<0
+                    o.f_d$1 = -o.f_d$1;
+        $(if:0) # air friction
+            $(for:x,y)
+                o.f_d$1 *= 1-0.02
+
+    fncode: ball_draw(ball o, Graphics2D g2)
+        g2.setColor(o.c)
+        tn_x =(int)(o.f_x-o.f_r)
+        tn_y =(int)(o.f_y-o.f_r)
+        tn_w =(int)(o.f_r*2)
+        g2.fillOval(tn_x, tn_y, tn_w, tn_w)
+

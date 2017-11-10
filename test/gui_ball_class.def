@@ -9,6 +9,12 @@ page: test, gui_frame
 
     $call init_random
     $call init_balls, 100
+    &call each_ball
+        tf_v = 2.0 + $(rand)*5
+        tf_a = $(rand)*6.28
+        tf_dx = tf_v * Math.cos(tf_a)
+        tf_dy = tf_v * Math.sin(tf_a)
+        $(o)=new ball(n_w/2, n_h/2, tf_dx, tf_dy)
 
     &call add_canvas, canvas, n_w, n_h
         &call each_ball
@@ -16,7 +22,7 @@ page: test, gui_frame
 
     &call animate, 20, 500
         &call each_ball
-            $(o).update()
+            $(o).update(n_w, n_h)
 
         canvas.repaint()
 
@@ -26,27 +32,21 @@ page: test, gui_frame
 
     subcode: init_balls(N)
         $private ball[] balls
-        balls = new ball[$(N)](n_w/2, n_h/2)
+        balls = new ball[$(N)]
 
     subcode: each_ball
         $for i=0:balls.length
             $(set:o=balls[i])
             BLOCK
 
-    fncode: ball.__init(int x, int y)
-        f_x = (float)x;
-        f_y = (float)y;
+    fncode: ball.__init(tf_x, tf_y, tf_dx, tf_dy)
+        $(for:x,y,dx,dy)
+            f_$1 = tf_$1;
         f_r = 5;
-
-        tf_v = 2.0 + $(rand)*5
-        tf_a = $(rand)*6.28
-        f_dx = tf_v * Math.cos(tf_a);
-        f_dy = tf_v * Math.sin(tf_a); 
-
         c = Color.blue;
         f_alpha = 1.0;
 
-    fncode: ball.update
+    fncode: ball.update(n_w, n_h)
         $(for:x,y)
             f_$1 += f_d$1
         $(if:1) # bouce off walls
