@@ -36,9 +36,9 @@ page: output_java, inherit, c
         $call dump_public_private
 
         $call dump_structs
+        $call filter_class_methods
 
-        my $funclist=\@$(super:function_list)
-        $foreach $func in @$funclist
+        $foreach $func in @$(super:function_list)
             $call process_function_java
             $func->{skip_declare}=1
             $func->{processed}=1
@@ -69,13 +69,19 @@ page: output_java, inherit, c
 
         subcode: process_function_java
             my $name=$func->{name}
+            $if $name=~/(\w+)\.(\w+)/
+                $name=$2
+                $func->{class}=$1
+            $else
+                $func->{class}=$page->{_pagename}
+            # ----------------
             $if $name eq "main"
                 $func->{skip_makefile}=1
                 $func->{ret_type}="public static void"
                 $func->{param_list}=["String[] args"]
             $elif $name =~/^_(\w*)_init$/
                 $func->{ret_type}="public"
-                $func->{name}=$page->{_pagename}
+                $func->{name}=$func->{class}
             $else
                 $if $func->{ret_type} and $func->{ret_type}=~/^(public|private)/
                     NOOP
@@ -94,16 +100,42 @@ page: output_java, inherit, c
         #       filter @$out 
         #       dump here
         subcode: dump_structs
+            my %classes
             $foreach $name in @$(super:struct_list)
                 my $st = $$(super:structs){$name}
                 my $h  = $st->{hash}
                 push @$out, "\n";
                 push @$out, "class $name {\n"
-                my $sp = '    '
+                push @$out, "INDENT"
                 $foreach $p in @{$st->{list}}
                     my $type = $h->{$p}->{type}
-                    push @$out, "    public $type $p;\n"
+                    push @$out, "public $type $p;\n"
+
+                my $s_stub = "_$name\_methods"
+                push @$out, "NEWLINE"
+                push @$out, "DUMP_STUB $s_stub"
+                $classes{$name} = MyDef::compileutil::get_named_block($s_stub)
+
+                push @$out, "DEDENT"
                 push @$out, "};\n"
+
+        subcode: filter_class_methods
+            my $alt_out
+            $foreach $l in @$out
+                $if !$alt_out and $l=~/DUMP_STUB fn(\d+)_open/
+                    my $func = $$(super:function_list)[$1]
+                    $if $func->{name}=~/^(\w+)\.(\w+)/
+                        $if $classes{$1}
+                            $alt_out = $classes{$1}
+
+                $if $alt_out
+                    push @$alt_out, $l
+
+                    $if $l=~/DUMP_STUB fn(\d+)_close/
+                        undef $alt_out
+
+                    $l = "NOOP"
+
 
 #---- import ---------------------------- 
 subcode:: java_init

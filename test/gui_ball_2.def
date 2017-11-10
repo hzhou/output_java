@@ -9,16 +9,14 @@ page: test, gui_frame
 
     $call init_random
     $call init_balls, 100
-    &call each_ball
-        $(o) = ball_create(n_w/2, n_h/2)
 
     &call add_canvas, canvas, n_w, n_h
         &call each_ball
-            ball_draw($(o), g)
+            $(o).draw(g)
 
     &call animate, 20, 500
         &call each_ball
-            ball_update($(o))
+            $(o).update()
 
         canvas.repaint()
 
@@ -28,42 +26,41 @@ page: test, gui_frame
 
     subcode: init_balls(N)
         $private ball[] balls
-        balls = new ball[$(N)]
+        balls = new ball[$(N)](n_w/2, n_h/2)
 
     subcode: each_ball
         $for i=0:balls.length
             $(set:o=balls[i])
             BLOCK
 
-    fncode: ball_create(int x, int y)
-        $return_type ball
-        o = new ball()
-        o.f_x = (float)x
-        o.f_y = (float)y
-        o.f_r = 5
+    fncode: ball.__init(int x, int y)
+        f_x = (float)x;
+        f_y = (float)y;
+        f_r = 5;
+
         tf_v = 2.0 + $(rand)*5
         tf_a = $(rand)*6.28
-        o.f_dx = tf_v * Math.cos(tf_a) 
-        o.f_dy = tf_v * Math.sin(tf_a) 
-        o.c = Color.blue
-        o.f_alpha = 1.0
-        return o
+        f_dx = tf_v * Math.cos(tf_a);
+        f_dy = tf_v * Math.sin(tf_a); 
 
-    fncode: ball_update(ball o)
+        c = Color.blue;
+        f_alpha = 1.0;
+
+    fncode: ball.update
         $(for:x,y)
-            o.f_$1 += o.f_d$1
+            f_$1 += f_d$1
         $(if:1) # bouce off walls
             $(for:x,y and n_w, n_h)
-                $if o.f_$1+o.f_r>$2 || o.f_$1-o.f_r<0
-                    o.f_d$1 = -o.f_d$1
+                $if f_$1+f_r>$2 || f_$1-f_r<0
+                    f_d$1 = -f_d$1;
         $(if:0) # air friction
             $(for:x,y)
-                o.f_d$1 *= 1-0.02
+                f_d$1 *= 1-0.02
 
-    fncode: ball_draw(ball o, Graphics2D g2)
-        g2.setColor(o.c)
-        tn_x =(int)(o.f_x-o.f_r)
-        tn_y =(int)(o.f_y-o.f_r)
-        tn_w =(int)(o.f_r*2)
+    fncode: ball.draw(Graphics2D g2)
+        g2.setColor(c)
+        tn_x =(int)(f_x-f_r)
+        tn_y =(int)(f_y-f_r)
+        tn_w =(int)(f_r*2)
         g2.fillOval(tn_x, tn_y, tn_w, tn_w)
 
