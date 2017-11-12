@@ -26,8 +26,6 @@ perlcode: set_layout
         push @$out, "frame.setLayout(new FlowLayout($align$2));"
 
 fncode: _gui_init
-    $(if:!size)
-        $(set2:size=800,600)
     $(if:!title)
         $(set2:title=NoTitle)
 
@@ -40,7 +38,10 @@ fncode: _gui_init
         frame.setLayout(new FlowLayout())
     $Call @main2
 
-    frame.setSize($(size))
+    $(if:size)
+        frame.setSize($(size))
+    $(else)
+        frame.pack()
     frame.setVisible(true)
     # ----
     subcode: default_window_events
