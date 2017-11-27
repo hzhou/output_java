@@ -46,6 +46,17 @@ subcode: scanner(@file)
     subcode: get_double(v)
         $(v) = scanner.nextDouble()
 
+# ----
+subcode: load_img(file)
+    $import java.io.*
+    $import java.awt.image.*
+    $import javax.imageio.*
+    BufferedImage img = null;
+    try {
+        img = ImageIO.read(new File("$(file)"));
+    } catch (IOException e) {
+        $print IOException
+    }
 #---- Output ----
 subcode: open_w(file)
     $import java.io.*
