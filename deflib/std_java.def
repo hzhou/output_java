@@ -8,15 +8,15 @@ fncode: _basic_main(main)
     $call main2
 
 #---- BufferedReader ----
-subcode: input(@file)
+subcode: input(file)
     $import java.io.*
     &call try
-        $(if:file=)
+        $(if:file=-)
             # InputStreamReader wraps byte stream into char stream
             $(set:in=new InputStreamReader(System.in))
         $(else)
             $(set:in=new FileReader($(file)))
-        $local BufferedReader In = new BufferedReader($(in))
+        BufferedReader In = new BufferedReader($(in));
         BLOCK
         In.close();
 
@@ -24,10 +24,10 @@ subcode: input(@file)
         $(v) = In.readLine()
 
 #---- Scanner ----
-subcode: scanner(@file)
+subcode: scanner(file)
     $import java.io.*
     $import java.util.Scanner
-    $(if:file=)
+    $(if:file=-)
         $(set:in=System.in)
     $(else)
         $(set:in=new FileReader($(file)))
@@ -45,6 +45,15 @@ subcode: scanner(@file)
 
     subcode: get_double(v)
         $(v) = scanner.nextDouble()
+
+#---------------------------------------- 
+subcode: open_r(file)
+    &call input, $(file)
+        $while true
+            String s = In.readLine();
+            $if s==null
+                break
+            BLOCK
 
 # ----
 subcode: load_img(file)
