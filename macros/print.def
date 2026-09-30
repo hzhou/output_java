@@ -13,7 +13,6 @@ fncode: parse_print($param)
         $if $param=~/^usesub:\s*(\w+)/
             $print_type=$1
         $else
-            $call list_called_functions
             #--- fmt_string, add newline
             my ($n, $fmt)=MyDef::output_c::fmt_string($param, 1)
             $if $print_type==1
@@ -45,10 +44,3 @@ fncode: parse_print($param)
             # err
             push @$out, "$print_to.printf($fmt);"
 
-    # $print returns before output_c's expression check sees the calls
-    subcode: list_called_functions
-        $while $param=~/(\w+)\s*\(/g
-            my $name = $1
-            $if $$(super:function_autolist){$name} and !$$(super:list_function_hash){$name}
-                $$(super:list_function_hash){$name}=1
-                push @$(super:list_function_list), $name
