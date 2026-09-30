@@ -2,10 +2,8 @@
 #   Single class library don't need use frame [$list ...]
 
 subcode: basic_frame
-    $list _basic_main
-
-fncode: _basic_main(main)
-    $call main2
+    $function main
+        $call @main
 
 #---- BufferedReader ----
 subcode: input(file)

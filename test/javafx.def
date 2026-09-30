@@ -11,7 +11,7 @@ subcode: javafx_frame
 
     $function start(Stage stage)
         $in_function
-            $call main2
+            $call @main
         $(if:title)
             stage.setTitle("$(title)")
         stage.show()

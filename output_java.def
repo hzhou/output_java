@@ -78,22 +78,22 @@ page: output_java, inherit, c
             # ----------------
             $if $name eq "main"
                 $func->{skip_makefile}=1
-                $func->{ret_type}="public static void"
+                $func->{return_type}="public static void"
                 $func->{param_list}=["String[] args"]
             $elif $name =~/^_(\w*)_init$/
-                $func->{ret_type}="public"
+                $func->{return_type}="public"
                 $func->{name}=$func->{class}
             $else
-                $if $func->{ret_type} and $func->{ret_type}=~/^(public|private)/
+                $if $func->{return_type} and $func->{return_type}=~/^(public|private)/
                     NOOP
                 $else
-                    $if !$func->{ret_type}
-                        $func->{ret_type}="void"
+                    $if !$func->{return_type}
+                        $func->{return_type}="void"
 
                     $if $$(super:function_autolist){$name} eq "global"
-                        $func->{ret_type}="public static $func->{ret_type}"
+                        $func->{return_type}="public static $func->{return_type}"
                     $else
-                        $func->{ret_type}="public $func->{ret_type}"
+                        $func->{return_type}="public $func->{return_type}"
 
             $(super:process_function_std)($func)
 
@@ -109,7 +109,7 @@ page: output_java, inherit, c
                 push @$out, "class $name {\n"
                 push @$out, "INDENT"
                 $foreach $p in @{$st->{list}}
-                    my $type = $h->{$p}->{type}
+                    my $type = $h->{$p}
                     push @$out, "public $type $p;\n"
 
                 my $s_stub = "_$name\_methods"

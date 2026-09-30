@@ -1,4 +1,4 @@
-include: java/awt.def
+include: java/gui.def
 
 macros:
     swing: 1

@@ -12,7 +12,10 @@ subcode: gui_frame
         $(setmacro:Lbl=JLabel)
         $(setmacro:Txt=JTextField)
 
-    $list _gui_init, _gui_main
+    $function _gui_init
+        $call gui_init
+    $function main
+        app = new $(_pagename)()
 
 perlcode: set_layout
     $if $param=~/(left|center|right)(.*)/
@@ -25,7 +28,7 @@ perlcode: set_layout
             $align = "FlowLayout.TRAILING"
         push @$out, "frame.setLayout(new FlowLayout($align$2));"
 
-fncode: _gui_init
+subcode: gui_init
     $(if:!title)
         $(set2:title=NoTitle)
 
@@ -36,7 +39,7 @@ fncode: _gui_init
         $call set_layout, $(align)
     $(else)
         frame.setLayout(new FlowLayout())
-    $Call @main2
+    $Call @main
 
     $(if:size)
         frame.setSize($(size))
@@ -132,9 +135,6 @@ fncode: _gui_init
             }
         });
         
-fncode: _gui_main(main)
-    app = new $(_pagename)()
-
 #----------------------------------------------- 
 subcode: animate(millisec, delay)
     $import javax.swing.Timer
