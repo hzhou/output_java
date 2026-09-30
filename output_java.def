@@ -36,16 +36,16 @@ page: output_java, inherit, c
         $if $page->{package}
             push @$f, "package $page->{package};\n"
         $call dump_import
+        my %has_constructor
+        $foreach $func in @$(super:function_list)
+            $if $func->{name}=~/^(?:(\w+)\.)?_\w*_init$/
+                $has_constructor{$1 || $page->{_pagename}}=1
         $call class_wrap
         $call dump_public_private
 
         $call dump_structs
         $call filter_class_methods
 
-        my %has_constructor
-        $foreach $func in @$(super:function_list)
-            $if $func->{name}=~/^(?:(\w+)\.)?_\w*_init$/
-                $has_constructor{$1 || $page->{_pagename}}=1
         $foreach $func in @$(super:function_list)
             $call process_function_java
             $func->{skip_declare}=1
@@ -72,6 +72,8 @@ page: output_java, inherit, c
                         my $type = $v->{type}
                         $type=~s/\*/[]/g
                         my $decl="$type $v->{name}"
+                        $if !$has_constructor{$page->{_pagename}}
+                            $decl = "static $decl"
                         push @$f, "    $1 $decl;\n"
                     push @$f, "\n"
 
