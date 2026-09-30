@@ -24,7 +24,10 @@ page: output_java, inherit, c
             parse_print($1)
             return
         $elif $l=~/^\$foreach\s*(.+) in (.+)/
-            return $(super:single_block)("for($1 : $2){", "}")
+            my ($v, $list) = ($1, $2)
+            $if $v=~/^\w+$/
+                $v = "var $v"
+            return $(super:single_block)("for($v : $list){", "}")
         $call @java_parse
     #--------------------
     subcode: on_dumpout
@@ -38,6 +41,10 @@ page: output_java, inherit, c
         $call dump_structs
         $call filter_class_methods
 
+        my %has_constructor
+        $foreach $func in @$(super:function_list)
+            $if $func->{name}=~/^(?:(\w+)\.)?_\w*_init$/
+                $has_constructor{$1 || $page->{_pagename}}=1
         $foreach $func in @$(super:function_list)
             $call process_function_java
             $func->{skip_declare}=1
@@ -89,8 +96,13 @@ page: output_java, inherit, c
                 $else
                     $if !$func->{return_type}
                         $func->{return_type}="void"
+                    $elif $func->{return_type} eq "char*"
+                        $func->{return_type}="String"
 
                     $if $$(super:function_autolist){$name} eq "global"
+                        $func->{return_type}="public static $func->{return_type}"
+                    $elif $func->{class} eq $page->{_pagename} and !$has_constructor{$func->{class}}
+                        # the page class is never instantiated, e.g. basic_frame
                         $func->{return_type}="public static $func->{return_type}"
                     $else
                         $func->{return_type}="public $func->{return_type}"

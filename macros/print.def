@@ -1,5 +1,13 @@
 subcode:: _autoload
     $MyDef::output_c::var_fmts{String} = '%s'
+    # %s prints numbers the way println does (1.5, not 1.500000)
+    $(for:float,double)
+        $MyDef::output_c::var_fmts{$1} = '%s'
+    $(for:byte,short,long)
+        $MyDef::output_c::var_fmts{$1} = '%d'
+    $MyDef::output_c::var_fmts{boolean} = '%b'
+    # %s formats any value, so use it when the type is unknown
+    $MyDef::output_c::var_fmts{default} = '%s'
 
 fncode: parse_print($param)
     $global $print_type=1

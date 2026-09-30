@@ -60,6 +60,11 @@ subcode:: java_parse
         $else
             push @$out, "$name = $val;"
         return
+    $elif $l=~/^(\w+)\s*=\s*("(?:[^"\\]|\\.)*")\s*;?\s*$/
+        # string literal: String, not output_c's char*
+        $(super:auto_add_var)($1, "String")
+        push @$out, "$1 = $2;"
+        return
 
 subcode: _autoload
     $global %common_classes
