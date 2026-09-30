@@ -1,13 +1,8 @@
 subcode:: _autoload
-    $MyDef::output_c::var_fmts{String} = '%s'
-    # %s prints numbers the way println does (1.5, not 1.500000)
-    $(for:float,double)
+    # Java's %s formats any value (numbers print as println does),
+    # so use it for every type instead of guessing from names
+    $(for:String,int,long,short,byte,char,float,double,boolean,default)
         $MyDef::output_c::var_fmts{$1} = '%s'
-    $(for:byte,short,long)
-        $MyDef::output_c::var_fmts{$1} = '%d'
-    $MyDef::output_c::var_fmts{boolean} = '%b'
-    # %s formats any value, so use it when the type is unknown
-    $MyDef::output_c::var_fmts{default} = '%s'
 
 fncode: parse_print($param)
     $global $print_type=1
@@ -18,6 +13,7 @@ fncode: parse_print($param)
         $if $param=~/^usesub:\s*(\w+)/
             $print_type=$1
         $else
+            $call list_called_functions
             #--- fmt_string, add newline
             my ($n, $fmt)=MyDef::output_c::fmt_string($param, 1)
             $if $print_type==1
@@ -48,3 +44,11 @@ fncode: parse_print($param)
         $else
             # err
             push @$out, "$print_to.printf($fmt);"
+
+    # $print returns before output_c's expression check sees the calls
+    subcode: list_called_functions
+        $while $param=~/(\w+)\s*\(/g
+            my $name = $1
+            $if $$(super:function_autolist){$name} and !$$(super:list_function_hash){$name}
+                $$(super:list_function_hash){$name}=1
+                push @$(super:list_function_list), $name
