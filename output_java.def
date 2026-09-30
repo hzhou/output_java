@@ -36,10 +36,13 @@ page: output_java, inherit, c
         $if $page->{package}
             push @$f, "package $page->{package};\n"
         $call dump_import
+        # the page class is never instantiated without a constructor,
+        # $extends or $implements (e.g. basic_frame): make it all static
         my %has_constructor
         $foreach $func in @$(super:function_list)
             $if $func->{name}=~/^(?:(\w+)\.)?_\w*_init$/
                 $has_constructor{$1 || $page->{_pagename}}=1
+        my $page_static = !$has_constructor{$page->{_pagename}} && !@extends && !@implements
         $call class_wrap
         $call dump_public_private
 
@@ -72,7 +75,7 @@ page: output_java, inherit, c
                         my $type = $v->{type}
                         $type=~s/\*/[]/g
                         my $decl="$type $v->{name}"
-                        $if !$has_constructor{$page->{_pagename}}
+                        $if $page_static
                             $decl = "static $decl"
                         push @$f, "    $1 $decl;\n"
                     push @$f, "\n"
@@ -104,8 +107,7 @@ page: output_java, inherit, c
 
                     $if $$(super:function_autolist){$name} eq "global"
                         $func->{return_type}="public static $func->{return_type}"
-                    $elif $func->{class} eq $page->{_pagename} and !$has_constructor{$func->{class}}
-                        # the page class is never instantiated, e.g. basic_frame
+                    $elif $func->{class} eq $page->{_pagename} and $page_static
                         $func->{return_type}="public static $func->{return_type}"
                     $else
                         $func->{return_type}="public $func->{return_type}"

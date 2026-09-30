@@ -60,6 +60,17 @@ subcode:: java_parse
         $else
             push @$out, "$name = $val;"
         return
+    $elif $l=~/^(\w+)\s*=\s*([+-]?(?:\d+\.\d*|\.\d+|\d+[eE][+-]?\d+))\s*;?\s*$/
+        # a decimal literal is a double in Java (output_c infers float)
+        my ($name, $val) = ($1, $2)
+        my $type = $(super:get_c_type)($name)
+        $if !$type or $type eq "void" or $type eq "float"
+            $type = "double"
+        $else
+            undef $type
+        $(super:auto_add_var)($name, $type, $val)
+        push @$out, "$name = $val;"
+        return
     $elif $l=~/^(\w+)\s*=\s*("(?:[^"\\]|\\.)*")\s*;?\s*$/
         # string literal: String, not output_c's char*
         $(super:auto_add_var)($1, "String")

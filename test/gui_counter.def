@@ -15,8 +15,8 @@ page: AWTCounter, gui_frame
     # $call add_glue
     $call add_button, btn_count, "Click"
 
+    $private n_count=0
     &call add_listener, btn_count
-        $private n_count=0
         n_count++
         txt_count.setText( $(itoa:n_count))
 

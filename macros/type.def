@@ -2,7 +2,7 @@ subcode:: java_init
     %$(super:type_name)=(
         c=>"byte",
         d=>"double",
-        f=>"float",
+        f=>"double",
         i=>"int",
         j=>"int",
         k=>"int",
