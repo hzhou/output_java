@@ -16,6 +16,7 @@ page: output_java, inherit, c
 
     #-------------------
     subcode: on_parsecode
+        $call class_members_in_scope
         $if $l=~/^\$import\s*(.*)/
             $foreach $p in split /,\s*/, $1
                 add_import($p)
@@ -149,6 +150,18 @@ page: output_java, inherit, c
 
                     $l = "NOOP"
 
+
+#---- struct methods, e.g. fncode: Point.move ----
+# fields are in scope, like params: in var_hash but not declared
+subcode: class_members_in_scope
+    my $func = $$(super:cur_function)
+    $if $func and !$func->{_members} and $func->{name}=~/^(\w+)\./
+        $func->{_members}=1
+        my $st = $$(super:structs){$1}
+        $if $st
+            $foreach $p in @{$st->{list}}
+                $if !$func->{var_hash}->{$p}
+                    $func->{var_hash}->{$p}={name=>$p, type=>$st->{hash}->{$p}}
 
 #---- import ---------------------------- 
 subcode:: java_init
